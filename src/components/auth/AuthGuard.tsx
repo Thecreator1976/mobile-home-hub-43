@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 interface AuthGuardProps {
@@ -12,11 +13,37 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const { user, userRole, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [profileStatus, setProfileStatus] = useState<string | null>(null);
+  const [checkingProfile, setCheckingProfile] = useState(true);
 
   useEffect(() => {
     if (!isLoading && !user) {
       // Redirect to login, preserving the intended destination
       navigate("/login", { state: { from: location.pathname }, replace: true });
+      return;
+    }
+
+    if (user) {
+      // Check profile status
+      const checkProfile = async () => {
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("status")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!error && data) {
+          setProfileStatus(data.status);
+          
+          // Redirect based on profile status
+          if (data.status === "pending") {
+            navigate("/pending-approval", { replace: true });
+          }
+        }
+        setCheckingProfile(false);
+      };
+
+      checkProfile();
     }
   }, [user, isLoading, navigate, location]);
 
@@ -32,7 +59,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     }
   }, [user, userRole, requiredRole, isLoading, navigate]);
 
-  if (isLoading) {
+  if (isLoading || checkingProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -45,6 +72,11 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   if (!user) {
     return null;
+  }
+
+  // Check if profile is pending approval
+  if (profileStatus === "pending") {
+    return null; // Will be redirected by useEffect
   }
 
   return <>{children}</>;
