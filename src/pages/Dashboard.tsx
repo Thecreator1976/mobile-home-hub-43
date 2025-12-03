@@ -3,7 +3,9 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentLeadsTable } from "@/components/dashboard/RecentLeadsTable";
 import { UpcomingAppointments } from "@/components/dashboard/UpcomingAppointments";
 import { PipelineChart } from "@/components/dashboard/PipelineChart";
+import { DashboardChart } from "@/components/dashboard/DashboardChart";
 import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, DollarSign, Home, TrendingUp, Calendar, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
@@ -102,6 +104,17 @@ export default function Dashboard() {
             </>
           )}
         </div>
+
+        {/* Sales Overview Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales Overview</CardTitle>
+            <CardDescription>Lead acquisition and closed deals over the past 12 months</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DashboardChart />
+          </CardContent>
+        </Card>
 
         {/* Charts & Tables Row */}
         <div className="grid gap-6 lg:grid-cols-3">
