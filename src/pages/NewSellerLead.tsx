@@ -1,392 +1,297 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Save, User, Home, DollarSign, MapPin } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { ArrowLeft, Save, Home, DollarSign, FileText, User } from "lucide-react";
+import BasicInfoForm from "@/components/leads/forms/BasicInfoForm";
+import PropertyInfoForm from "@/components/leads/forms/PropertyInfoForm";
+import FinancialInfoForm from "@/components/leads/forms/FinancialInfoForm";
+import DocumentsForm from "@/components/leads/forms/DocumentsForm";
+import { useSellerLeads, CreateLeadInput } from "@/hooks/useSellerLeads";
+
+interface LeadFormData {
+  basicInfo: {
+    name: string;
+    phone: string;
+    email: string;
+    address: string;
+    city: string;
+    state: string;
+    zip: string;
+    notes: string;
+  };
+  propertyInfo: {
+    homeType: string;
+    yearBuilt: number;
+    condition: number;
+    length: number;
+    width: number;
+    parkOwned: boolean;
+    lotRent: number;
+  };
+  financialInfo: {
+    askingPrice: number;
+    owedAmount: number;
+    estimatedValue: number;
+    targetOffer: number;
+    notes: string;
+  };
+  documents: {
+    photos: string[];
+    files: string[];
+  };
+}
 
 export default function NewSellerLead() {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [formData, setFormData] = useState({
-    // Contact Info
-    name: "",
-    phone: "",
-    email: "",
-    // Address
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    // Property Info
-    homeType: "",
-    yearBuilt: "",
-    condition: "",
-    length: "",
-    width: "",
-    parkOwned: true,
-    lotRent: "",
-    // Financial Info
-    askingPrice: "",
-    owedAmount: "",
-    estimatedValue: "",
-    targetOffer: "",
-    // Notes
-    notes: "",
+  const { createLead } = useSellerLeads();
+  const [activeTab, setActiveTab] = useState("basic");
+  const [formData, setFormData] = useState<LeadFormData>({
+    basicInfo: {
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      zip: "",
+      notes: "",
+    },
+    propertyInfo: {
+      homeType: "single",
+      yearBuilt: new Date().getFullYear(),
+      condition: 3,
+      length: 0,
+      width: 0,
+      parkOwned: true,
+      lotRent: 0,
+    },
+    financialInfo: {
+      askingPrice: 0,
+      owedAmount: 0,
+      estimatedValue: 0,
+      targetOffer: 0,
+      notes: "",
+    },
+    documents: {
+      photos: [],
+      files: [],
+    },
   });
 
-  const handleChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleInputChange = (section: keyof LeadFormData, field: string, value: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [field]: value,
+      },
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  const calculateEstimatedValue = () => {
+    const { propertyInfo } = formData;
+    const basePricePerSqFt = 50;
+    const conditionMultiplier = (propertyInfo.condition || 3) / 3;
+    const ageFactor = Math.max(0, 1 - (new Date().getFullYear() - (propertyInfo.yearBuilt || 2000)) * 0.01);
+    const squareFeet = (propertyInfo.length || 0) * (propertyInfo.width || 0);
+    
+    if (squareFeet === 0) return 0;
+    return Math.round(squareFeet * basePricePerSqFt * conditionMultiplier * ageFactor);
+  };
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  const calculateTargetOffer = () => {
+    const estimatedValue = calculateEstimatedValue();
+    return Math.round(estimatedValue * 0.7);
+  };
 
-    toast({
-      title: "Lead Created",
-      description: `Successfully added ${formData.name} as a new seller lead.`,
+  const handleCalculate = () => {
+    const estimatedValue = calculateEstimatedValue();
+    const targetOffer = calculateTargetOffer();
+    handleInputChange("financialInfo", "estimatedValue", estimatedValue);
+    handleInputChange("financialInfo", "targetOffer", targetOffer);
+  };
+
+  const handleNext = () => {
+    if (activeTab === "basic") setActiveTab("property");
+    else if (activeTab === "property") setActiveTab("financial");
+    else if (activeTab === "financial") setActiveTab("documents");
+  };
+
+  const handleBack = () => {
+    if (activeTab === "property") setActiveTab("basic");
+    else if (activeTab === "financial") setActiveTab("property");
+    else if (activeTab === "documents") setActiveTab("financial");
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.basicInfo.name.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Seller name is required.",
+        variant: "destructive",
+      });
+      setActiveTab("basic");
+      return;
+    }
+
+    if (!formData.basicInfo.address.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Property address is required.",
+        variant: "destructive",
+      });
+      setActiveTab("basic");
+      return;
+    }
+
+    if (!formData.financialInfo.askingPrice) {
+      toast({
+        title: "Validation Error",
+        description: "Asking price is required.",
+        variant: "destructive",
+      });
+      setActiveTab("financial");
+      return;
+    }
+
+    const leadInput: CreateLeadInput = {
+      name: formData.basicInfo.name,
+      phone: formData.basicInfo.phone || undefined,
+      email: formData.basicInfo.email || undefined,
+      address: formData.basicInfo.address,
+      city: formData.basicInfo.city || undefined,
+      state: formData.basicInfo.state || undefined,
+      zip: formData.basicInfo.zip || undefined,
+      home_type: formData.propertyInfo.homeType as "single" | "double" | "triple",
+      year_built: formData.propertyInfo.yearBuilt || undefined,
+      condition: formData.propertyInfo.condition || undefined,
+      length_ft: formData.propertyInfo.length || undefined,
+      width_ft: formData.propertyInfo.width || undefined,
+      park_owned: formData.propertyInfo.parkOwned,
+      lot_rent: formData.propertyInfo.lotRent || undefined,
+      asking_price: formData.financialInfo.askingPrice,
+      owed_amount: formData.financialInfo.owedAmount || undefined,
+      estimated_value: formData.financialInfo.estimatedValue || calculateEstimatedValue() || undefined,
+      target_offer: formData.financialInfo.targetOffer || calculateTargetOffer() || undefined,
+      notes: formData.basicInfo.notes || formData.financialInfo.notes || undefined,
+    };
+
+    createLead.mutate(leadInput, {
+      onSuccess: () => {
+        navigate("/seller-leads");
+      },
     });
-
-    navigate("/seller-leads");
   };
 
   return (
     <DashboardLayout>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" type="button" asChild>
-            <Link to="/seller-leads">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="flex-1">
+          <div>
             <h1 className="text-3xl font-bold tracking-tight">New Seller Lead</h1>
-            <p className="text-muted-foreground">Add a new mobile home seller to your pipeline</p>
+            <p className="text-muted-foreground mt-1">
+              Add a new mobile home seller lead to your pipeline
+            </p>
           </div>
-          <Button variant="gradient" type="submit" disabled={isSubmitting}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Saving..." : "Save Lead"}
-          </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                Contact Information
-              </CardTitle>
-              <CardDescription>Basic details about the seller</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
-                  id="name"
-                  placeholder="John Smith"
-                  value={formData.name}
-                  onChange={(e) => handleChange("name", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="(555) 123-4567"
-                    value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formData.email}
-                    onChange={(e) => handleChange("email", e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Property Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Property Address
-              </CardTitle>
-              <CardDescription>Location of the mobile home</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="address">Street Address *</Label>
-                <Input
-                  id="address"
-                  placeholder="123 Oak Lane, Lot 45"
-                  value={formData.address}
-                  onChange={(e) => handleChange("address", e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City *</Label>
-                  <Input
-                    id="city"
-                    placeholder="Phoenix"
-                    value={formData.city}
-                    onChange={(e) => handleChange("city", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="state">State *</Label>
-                  <Input
-                    id="state"
-                    placeholder="AZ"
-                    value={formData.state}
-                    onChange={(e) => handleChange("state", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input
-                    id="zip"
-                    placeholder="85001"
-                    value={formData.zip}
-                    onChange={(e) => handleChange("zip", e.target.value)}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Property Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Home className="h-5 w-5 text-primary" />
-                Property Details
-              </CardTitle>
-              <CardDescription>Information about the mobile home</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="homeType">Home Type *</Label>
-                  <Select value={formData.homeType} onValueChange={(v) => handleChange("homeType", v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="single">Single Wide</SelectItem>
-                      <SelectItem value="double">Double Wide</SelectItem>
-                      <SelectItem value="triple">Triple Wide</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="yearBuilt">Year Built</Label>
-                  <Input
-                    id="yearBuilt"
-                    type="number"
-                    placeholder="1998"
-                    value={formData.yearBuilt}
-                    onChange={(e) => handleChange("yearBuilt", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="condition">Condition (1-5)</Label>
-                  <Select value={formData.condition} onValueChange={(v) => handleChange("condition", v)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Rate" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1 - Poor</SelectItem>
-                      <SelectItem value="2">2 - Fair</SelectItem>
-                      <SelectItem value="3">3 - Good</SelectItem>
-                      <SelectItem value="4">4 - Very Good</SelectItem>
-                      <SelectItem value="5">5 - Excellent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="length">Length (ft)</Label>
-                  <Input
-                    id="length"
-                    type="number"
-                    placeholder="56"
-                    value={formData.length}
-                    onChange={(e) => handleChange("length", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="width">Width (ft)</Label>
-                  <Input
-                    id="width"
-                    type="number"
-                    placeholder="28"
-                    value={formData.width}
-                    onChange={(e) => handleChange("width", e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <Label>Park Owned Land</Label>
-                  <p className="text-sm text-muted-foreground">Does the park own the land?</p>
-                </div>
-                <Switch
-                  checked={formData.parkOwned}
-                  onCheckedChange={(checked) => handleChange("parkOwned", checked)}
-                />
-              </div>
-              {formData.parkOwned && (
-                <div className="space-y-2">
-                  <Label htmlFor="lotRent">Monthly Lot Rent</Label>
-                  <Input
-                    id="lotRent"
-                    type="number"
-                    placeholder="450"
-                    value={formData.lotRent}
-                    onChange={(e) => handleChange("lotRent", e.target.value)}
-                  />
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Financial Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                Financial Information
-              </CardTitle>
-              <CardDescription>Pricing and deal analysis</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="askingPrice">Asking Price *</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="askingPrice"
-                      type="number"
-                      placeholder="45000"
-                      className="pl-7"
-                      value={formData.askingPrice}
-                      onChange={(e) => handleChange("askingPrice", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="owedAmount">Amount Owed</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="owedAmount"
-                      type="number"
-                      placeholder="12000"
-                      className="pl-7"
-                      value={formData.owedAmount}
-                      onChange={(e) => handleChange("owedAmount", e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="estimatedValue">Estimated Value</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <Input
-                      id="estimatedValue"
-                      type="number"
-                      placeholder="40000"
-                      className="pl-7"
-                      value={formData.estimatedValue}
-                      onChange={(e) => handleChange("estimatedValue", e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="targetOffer">Target Offer</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-primary">$</span>
-                    <Input
-                      id="targetOffer"
-                      type="number"
-                      placeholder="35000"
-                      className="pl-7 border-primary/50 focus-visible:ring-primary"
-                      value={formData.targetOffer}
-                      onChange={(e) => handleChange("targetOffer", e.target.value)}
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Notes */}
         <Card>
           <CardHeader>
-            <CardTitle>Additional Notes</CardTitle>
-            <CardDescription>Any other important information about this lead</CardDescription>
+            <CardTitle>Lead Information</CardTitle>
+            <CardDescription>
+              Complete all sections to create a new seller lead
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea
-              placeholder="E.g., Motivated seller, needs to close quickly, property has new roof..."
-              rows={4}
-              value={formData.notes}
-              onChange={(e) => handleChange("notes", e.target.value)}
-            />
-          </CardContent>
-        </Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic" className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline">Basic Info</span>
+                </TabsTrigger>
+                <TabsTrigger value="property" className="flex items-center gap-2">
+                  <Home className="h-4 w-4" />
+                  <span className="hidden sm:inline">Property</span>
+                </TabsTrigger>
+                <TabsTrigger value="financial" className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden sm:inline">Financial</span>
+                </TabsTrigger>
+                <TabsTrigger value="documents" className="flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden sm:inline">Documents</span>
+                </TabsTrigger>
+              </TabsList>
 
-        {/* Submit Buttons */}
-        <div className="flex justify-end gap-4">
-          <Button variant="outline" type="button" asChild>
-            <Link to="/seller-leads">Cancel</Link>
-          </Button>
-          <Button variant="gradient" type="submit" disabled={isSubmitting}>
-            <Save className="h-4 w-4 mr-2" />
-            {isSubmitting ? "Saving..." : "Create Lead"}
-          </Button>
-        </div>
-      </form>
+              <TabsContent value="basic" className="space-y-4 pt-6">
+                <BasicInfoForm
+                  data={formData.basicInfo}
+                  onChange={(field, value) => handleInputChange("basicInfo", field, value)}
+                />
+              </TabsContent>
+
+              <TabsContent value="property" className="space-y-4 pt-6">
+                <PropertyInfoForm
+                  data={formData.propertyInfo}
+                  onChange={(field, value) => handleInputChange("propertyInfo", field, value)}
+                  onCalculate={handleCalculate}
+                />
+              </TabsContent>
+
+              <TabsContent value="financial" className="space-y-4 pt-6">
+                <FinancialInfoForm
+                  data={formData.financialInfo}
+                  onChange={(field, value) => handleInputChange("financialInfo", field, value)}
+                  calculatedEstimatedValue={calculateEstimatedValue()}
+                  calculatedTargetOffer={calculateTargetOffer()}
+                />
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-4 pt-6">
+                <DocumentsForm
+                  data={formData.documents}
+                  onChange={(field, value) => handleInputChange("documents", field, value)}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+          <CardFooter className="flex justify-between border-t px-6 py-4">
+            <div className="flex space-x-2">
+              {activeTab !== "basic" && (
+                <Button variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+              )}
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" onClick={() => navigate("/seller-leads")}>
+                Cancel
+              </Button>
+              {activeTab !== "documents" ? (
+                <Button onClick={handleNext}>Next</Button>
+              ) : (
+                <Button onClick={handleSubmit} disabled={createLead.isPending}>
+                  {createLead.isPending ? (
+                    "Creating..."
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Create Lead
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </CardFooter>
+        </Card>
+      </div>
     </DashboardLayout>
   );
 }
