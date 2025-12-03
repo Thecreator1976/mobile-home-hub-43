@@ -3,9 +3,27 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { RecentLeadsTable } from "@/components/dashboard/RecentLeadsTable";
 import { UpcomingAppointments } from "@/components/dashboard/UpcomingAppointments";
 import { PipelineChart } from "@/components/dashboard/PipelineChart";
-import { Users, DollarSign, Home, TrendingUp } from "lucide-react";
+import { useDashboardStats } from "@/hooks/useDashboardStats";
+import { Users, DollarSign, Home, TrendingUp, Calendar, UserCheck } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 export default function Dashboard() {
+  const { data: stats, isLoading } = useDashboardStats();
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-US", { 
+      style: "currency", 
+      currency: "USD", 
+      maximumFractionDigits: 0 
+    }).format(value);
+
+  const formatChange = (value: number) => {
+    if (value === 0) return null;
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value.toFixed(1)}% from last month`;
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -19,38 +37,70 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            title="Active Leads"
-            value={35}
-            change="+12% from last month"
-            changeType="positive"
-            icon={Users}
-            iconColor="bg-primary"
-          />
-          <StatCard
-            title="Properties Under Contract"
-            value={8}
-            change="+3 this week"
-            changeType="positive"
-            icon={Home}
-            iconColor="bg-status-contract"
-          />
-          <StatCard
-            title="Total Revenue (YTD)"
-            value="$284,500"
-            change="+18% from last year"
-            changeType="positive"
-            icon={DollarSign}
-            iconColor="bg-status-closed"
-          />
-          <StatCard
-            title="Conversion Rate"
-            value="24%"
-            change="+2% from last month"
-            changeType="positive"
-            icon={TrendingUp}
-            iconColor="bg-secondary"
-          />
+          {isLoading ? (
+            Array(4).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-xl" />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="New Leads (30d)"
+                value={stats?.newLeads || 0}
+                change={formatChange(stats?.leadsChange || 0) || undefined}
+                changeType={stats?.leadsChange && stats.leadsChange >= 0 ? "positive" : "negative"}
+                icon={Users}
+                iconColor="bg-primary"
+              />
+              <StatCard
+                title="Under Contract"
+                value={stats?.leadsUnderContract || 0}
+                icon={Home}
+                iconColor="bg-status-contract"
+              />
+              <StatCard
+                title="Total Revenue (Closed)"
+                value={formatCurrency(stats?.totalRevenue || 0)}
+                icon={DollarSign}
+                iconColor="bg-status-closed"
+              />
+              <StatCard
+                title="Conversion Rate"
+                value={`${(stats?.conversionRate || 0).toFixed(1)}%`}
+                icon={TrendingUp}
+                iconColor="bg-secondary"
+              />
+            </>
+          )}
+        </div>
+
+        {/* Secondary Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {isLoading ? (
+            Array(3).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-xl" />
+            ))
+          ) : (
+            <>
+              <StatCard
+                title="Active Buyers"
+                value={stats?.activeBuyers || 0}
+                icon={UserCheck}
+                iconColor="bg-status-contacted"
+              />
+              <StatCard
+                title="Today's Appointments"
+                value={stats?.todayAppointments || 0}
+                icon={Calendar}
+                iconColor="bg-status-offer"
+              />
+              <StatCard
+                title="Closed Deals"
+                value={stats?.closedDeals || 0}
+                icon={DollarSign}
+                iconColor="bg-status-closed"
+              />
+            </>
+          )}
         </div>
 
         {/* Charts & Tables Row */}
@@ -74,13 +124,13 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Add New Lead", href: "/seller-leads/new", color: "btn-gradient-primary" },
-                { label: "Import Buyers", href: "/buyers/import", color: "bg-secondary hover:bg-secondary/90" },
+                { label: "Import Buyers", href: "/buyers", color: "bg-secondary hover:bg-secondary/90" },
                 { label: "Create Expense", href: "/expenses", color: "bg-accent hover:bg-accent/90" },
                 { label: "Value Estimator", href: "/value-estimator", color: "bg-muted hover:bg-muted/80" },
               ].map((action) => (
-                <a
+                <Link
                   key={action.label}
-                  href={action.href}
+                  to={action.href}
                   className={`${action.color} text-center py-3 px-4 rounded-lg font-medium transition-all hover:shadow-md ${
                     action.color.includes("gradient") || action.color.includes("secondary") || action.color.includes("accent")
                       ? "text-primary-foreground"
@@ -88,7 +138,7 @@ export default function Dashboard() {
                   }`}
                 >
                   {action.label}
-                </a>
+                </Link>
               ))}
             </div>
           </div>
