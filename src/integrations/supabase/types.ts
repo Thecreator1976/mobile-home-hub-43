@@ -237,6 +237,59 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          items: Json
+          notes: string | null
+          po_number: string
+          seller_lead_id: string | null
+          status: string
+          total_amount: number
+          updated_at: string
+          vendor: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          po_number: string
+          seller_lead_id?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          vendor: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          po_number?: string
+          seller_lead_id?: string | null
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          vendor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       seller_leads: {
         Row: {
           address: string

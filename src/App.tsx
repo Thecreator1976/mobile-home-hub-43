@@ -33,6 +33,8 @@ const ImportBuyers = lazy(() => import("./pages/ImportBuyers"));
 const CalendarPage = lazy(() => import("./pages/CalendarPage"));
 const NewAppointment = lazy(() => import("./pages/NewAppointment"));
 const Expenses = lazy(() => import("./pages/Expenses"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
+const NewPurchaseOrder = lazy(() => import("./pages/NewPurchaseOrder"));
 const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
@@ -186,7 +188,15 @@ const App = () => (
                 path="/purchase-orders"
                 element={
                   <LazyAuthRoute>
-                    <Expenses />
+                    <PurchaseOrders />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/purchase-orders/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewPurchaseOrder />
                   </LazyAuthRoute>
                 }
               />
