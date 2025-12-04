@@ -53,6 +53,7 @@ import {
   Filter,
   Calendar,
   MapPin,
+  Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useBuyers, Buyer } from "@/hooks/useBuyers";
@@ -300,6 +301,12 @@ export default function Buyers() {
                                   <Link to={`/buyers/${buyer.id}/edit`}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit Buyer
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link to={`/buyers/${buyer.id}?tab=matches`}>
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Find Matches
                                   </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
