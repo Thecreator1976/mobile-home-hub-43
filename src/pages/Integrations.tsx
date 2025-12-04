@@ -44,6 +44,8 @@ import {
   XCircle,
   ExternalLink,
   Send,
+  FileSignature,
+  Bell,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -56,11 +58,18 @@ const INTEGRATION_TYPES = [
     color: "bg-blue-500",
   },
   {
+    id: "docusign",
+    name: "DocuSign E-Signature",
+    description: "Send contracts for electronic signature",
+    icon: FileSignature,
+    color: "bg-amber-500",
+  },
+  {
     id: "new_lead_notification",
     name: "New Lead Notification",
     description: "Notify when new seller lead is created",
-    icon: Zap,
-    color: "bg-yellow-500",
+    icon: Bell,
+    color: "bg-green-500",
   },
   {
     id: "status_change",
@@ -232,30 +241,57 @@ export default function Integrations() {
         </div>
 
         {/* Setup Instructions */}
-        <Card className="border-dashed border-2 bg-muted/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-4">
-              <div className="p-3 rounded-lg bg-primary/10">
-                <Zap className="h-6 w-6 text-primary" />
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="border-dashed border-2 bg-muted/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-blue-500/10">
+                  <Facebook className="h-6 w-6 text-blue-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">Facebook Posting via Zapier</h3>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Create a new Zap in Zapier</li>
+                    <li>Choose "Webhooks by Zapier" as trigger</li>
+                    <li>Select "Catch Hook" trigger event</li>
+                    <li>Add "Facebook Pages" action</li>
+                    <li>Map content from webhook data to post</li>
+                  </ol>
+                  <Button variant="link" className="px-0 h-auto" asChild>
+                    <a href="https://zapier.com/apps/facebook-pages/integrations" target="_blank" rel="noopener noreferrer">
+                      View Facebook Integration <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-semibold">How to set up Zapier integration</h3>
-                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                  <li>Create a new Zap in Zapier</li>
-                  <li>Choose "Webhooks by Zapier" as your trigger</li>
-                  <li>Select "Catch Hook" trigger event</li>
-                  <li>Copy the webhook URL and paste it above</li>
-                  <li>Add your desired actions (e.g., post to Facebook Page)</li>
-                </ol>
-                <Button variant="link" className="px-0 h-auto" asChild>
-                  <a href="https://zapier.com/apps/webhook/integrations" target="_blank" rel="noopener noreferrer">
-                    View Zapier Webhooks Guide <ExternalLink className="ml-1 h-3 w-3" />
-                  </a>
-                </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-dashed border-2 bg-muted/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-amber-500/10">
+                  <FileSignature className="h-6 w-6 text-amber-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">DocuSign E-Signature via Zapier</h3>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Create a new Zap in Zapier</li>
+                    <li>Choose "Webhooks by Zapier" as trigger</li>
+                    <li>Add "DocuSign" action</li>
+                    <li>Select "Create Signature Request"</li>
+                    <li>Map recipient emails and document data</li>
+                  </ol>
+                  <Button variant="link" className="px-0 h-auto" asChild>
+                    <a href="https://zapier.com/apps/docusign/integrations" target="_blank" rel="noopener noreferrer">
+                      View DocuSign Integration <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Integrations List */}
         <Card>

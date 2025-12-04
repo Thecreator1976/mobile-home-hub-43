@@ -14,6 +14,7 @@ import { useSellerLead } from "@/hooks/useSellerLeads";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, FileText, Loader2, Check, Send, Download, Edit, DollarSign, Calendar, User, Home, Sparkles } from "lucide-react";
 import { format } from "date-fns";
+import { SendToDocuSignButton } from "@/components/integrations/SendToDocuSignButton";
 
 export default function MakeOffer() {
   const { id } = useParams<{ id: string }>();
@@ -548,11 +549,23 @@ export default function MakeOffer() {
                 <Button variant="outline" onClick={() => navigate(-1)}>
                   Cancel
                 </Button>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <Button variant="secondary" onClick={downloadContract}>
                     <Download className="mr-2 h-4 w-4" />
                     Download
                   </Button>
+                  <SendToDocuSignButton 
+                    contractData={{
+                      sellerName: lead.name,
+                      sellerEmail: lead.email || "",
+                      buyerName: offerData.buyerName,
+                      propertyAddress: `${lead.address}${lead.city ? `, ${lead.city}` : ""}${lead.state ? `, ${lead.state}` : ""}`,
+                      purchasePrice: offerData.purchasePrice,
+                      earnestMoney: offerData.earnestMoney,
+                      closingDate: offerData.closingDate,
+                      specialTerms: offerData.specialTerms,
+                    }}
+                  />
                   <Button onClick={saveAndUpdateStatus}>
                     <Send className="mr-2 h-4 w-4" />
                     Save & Update Lead
