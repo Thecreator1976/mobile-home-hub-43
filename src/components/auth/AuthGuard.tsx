@@ -24,6 +24,13 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
     }
 
     if (user) {
+      // Check email verification first
+      if (!user.email_confirmed_at) {
+        navigate("/verify-email", { replace: true });
+        setCheckingProfile(false);
+        return;
+      }
+
       // Check profile status
       const checkProfile = async () => {
         const { data, error } = await supabase
