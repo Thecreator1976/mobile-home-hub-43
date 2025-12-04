@@ -46,6 +46,7 @@ import {
   Send,
   FileSignature,
   Bell,
+  Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -63,6 +64,13 @@ const INTEGRATION_TYPES = [
     description: "Send contracts for electronic signature",
     icon: FileSignature,
     color: "bg-amber-500",
+  },
+  {
+    id: "openphone",
+    name: "OpenPhone",
+    description: "Sync calls, SMS, and contacts with OpenPhone",
+    icon: Phone,
+    color: "bg-emerald-500",
   },
   {
     id: "new_lead_notification",
@@ -285,6 +293,31 @@ export default function Integrations() {
                   <Button variant="link" className="px-0 h-auto" asChild>
                     <a href="https://zapier.com/apps/docusign/integrations" target="_blank" rel="noopener noreferrer">
                       View DocuSign Integration <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-dashed border-2 bg-muted/20">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-lg bg-emerald-500/10">
+                  <Phone className="h-6 w-6 text-emerald-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-semibold">OpenPhone via Zapier</h3>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Create a new Zap in Zapier</li>
+                    <li>Choose "Webhooks by Zapier" as trigger</li>
+                    <li>Add "OpenPhone" action</li>
+                    <li>Select action: Send SMS, Create Contact, etc.</li>
+                    <li>Map lead phone/name data to OpenPhone</li>
+                  </ol>
+                  <Button variant="link" className="px-0 h-auto" asChild>
+                    <a href="https://zapier.com/apps/openphone/integrations" target="_blank" rel="noopener noreferrer">
+                      View OpenPhone Integration <ExternalLink className="ml-1 h-3 w-3" />
                     </a>
                   </Button>
                 </div>
