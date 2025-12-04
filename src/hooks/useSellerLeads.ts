@@ -56,6 +56,22 @@ export interface CreateLeadInput {
   notes?: string;
 }
 
+// Helper to trigger webhooks via edge function
+async function triggerLeadWebhooks(event: string, lead: SellerLead, oldStatus?: string, newStatus?: string) {
+  try {
+    const { error } = await supabase.functions.invoke("trigger-webhooks", {
+      body: { event, lead, old_status: oldStatus, new_status: newStatus },
+    });
+    if (error) {
+      console.error("Webhook trigger error:", error);
+    } else {
+      console.log(`Webhooks triggered for ${event}`);
+    }
+  } catch (err) {
+    console.error("Failed to trigger webhooks:", err);
+  }
+}
+
 export function useSellerLeads() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -109,14 +125,16 @@ export function useSellerLeads() {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as SellerLead;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["seller-leads"] });
       toast({
         title: "Lead Created",
         description: "The seller lead has been added successfully.",
       });
+      // Trigger webhooks for new lead
+      triggerLeadWebhooks("new_lead", data);
     },
     onError: (error) => {
       toast({
@@ -129,6 +147,15 @@ export function useSellerLeads() {
 
   const updateLead = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SellerLead> & { id: string }) => {
+      // Get current lead to check for status change
+      const { data: currentLead } = await supabase
+        .from("seller_leads")
+        .select("status")
+        .eq("id", id)
+        .single();
+      
+      const oldStatus = currentLead?.status;
+      
       const { data, error } = await supabase
         .from("seller_leads")
         .update(updates)
@@ -137,14 +164,18 @@ export function useSellerLeads() {
         .single();
 
       if (error) throw error;
-      return data;
+      return { lead: data as SellerLead, oldStatus, newStatus: updates.status };
     },
-    onSuccess: () => {
+    onSuccess: ({ lead, oldStatus, newStatus }) => {
       queryClient.invalidateQueries({ queryKey: ["seller-leads"] });
       toast({
         title: "Lead Updated",
         description: "The seller lead has been updated successfully.",
       });
+      // Trigger webhooks if status changed
+      if (newStatus && oldStatus !== newStatus) {
+        triggerLeadWebhooks("status_change", lead, oldStatus, newStatus);
+      }
     },
     onError: (error) => {
       toast({
