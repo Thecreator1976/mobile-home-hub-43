@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,11 +9,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useIntegrations } from "@/hooks/useIntegrations";
+import { useSMSTemplates } from "@/hooks/useSMSTemplates";
 import { toast } from "@/hooks/use-toast";
-import { MessageSquare, Send } from "lucide-react";
+import { MessageSquare, Send, FileText } from "lucide-react";
 
 interface SMSWithOpenPhoneButtonProps {
   lead: {
@@ -28,6 +36,7 @@ interface SMSWithOpenPhoneButtonProps {
     home_type: string | null;
     year_built: number | null;
     condition: number | null;
+    target_offer?: number | null;
   };
 }
 
@@ -35,8 +44,10 @@ const conditionLabels = ["", "Poor", "Fair", "Good", "Very Good", "Excellent"];
 
 export function SMSWithOpenPhoneButton({ lead }: SMSWithOpenPhoneButtonProps) {
   const { integrations, triggerWebhook } = useIntegrations();
+  const { templates, applyTemplate } = useSMSTemplates();
   const [open, setOpen] = useState(false);
   const [sending, setSending] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   
   const defaultMessage = `Hi ${lead.name},
 
@@ -57,6 +68,26 @@ Best regards`;
   const openPhoneIntegration = integrations.find(
     (i) => i.service_name === "openphone" && i.is_active
   );
+
+  // Apply selected template
+  useEffect(() => {
+    if (selectedTemplate && selectedTemplate !== "custom") {
+      const template = templates.find(t => t.id === selectedTemplate);
+      if (template) {
+        const appliedMessage = applyTemplate(template.content, {
+          name: lead.name,
+          address: lead.address,
+          city: lead.city || undefined,
+          state: lead.state || undefined,
+          asking_price: lead.asking_price,
+          target_offer: lead.target_offer || undefined,
+        });
+        setMessage(appliedMessage);
+      }
+    } else if (selectedTemplate === "custom") {
+      setMessage(defaultMessage);
+    }
+  }, [selectedTemplate, templates, lead]);
 
   if (!openPhoneIntegration?.webhook_url) {
     return null;
@@ -114,6 +145,13 @@ Best regards`;
     }
   };
 
+  // Group templates by category
+  const templatesByCategory = templates.reduce((acc, t) => {
+    if (!acc[t.category]) acc[t.category] = [];
+    acc[t.category].push(t);
+    return acc;
+  }, {} as Record<string, typeof templates>);
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -130,6 +168,34 @@ Best regards`;
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          {/* Template Selector */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Message Template
+            </Label>
+            <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a template or write custom..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">Custom Message</SelectItem>
+                {Object.entries(templatesByCategory).map(([category, categoryTemplates]) => (
+                  <div key={category}>
+                    <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
+                      {category.replace("_", " ")}
+                    </div>
+                    {categoryTemplates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="space-y-2">
             <Label>Message</Label>
             <Textarea
@@ -139,7 +205,7 @@ Best regards`;
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              {message.length} characters
+              {message.length} characters • Placeholders: [NAME], [ADDRESS], [ASKING_PRICE], [OFFER_AMOUNT]
             </p>
           </div>
         </div>

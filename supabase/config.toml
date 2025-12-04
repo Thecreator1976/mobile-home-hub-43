@@ -1,1 +1,10 @@
 project_id = "zwpazybcgsehxuwplokp"
+
+[functions.generate-contract]
+verify_jwt = true
+
+[functions.generate-promissory-note]
+verify_jwt = true
+
+[functions.trigger-webhooks]
+verify_jwt = true
