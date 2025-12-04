@@ -35,6 +35,8 @@ const NewAppointment = lazy(() => import("./pages/NewAppointment"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 const NewPurchaseOrder = lazy(() => import("./pages/NewPurchaseOrder"));
+const PersonalAdvances = lazy(() => import("./pages/PersonalAdvances"));
+const ProfitLoss = lazy(() => import("./pages/ProfitLoss"));
 const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
@@ -204,7 +206,7 @@ const App = () => (
                 path="/personal-advances"
                 element={
                   <LazyAuthRoute>
-                    <Expenses />
+                    <PersonalAdvances />
                   </LazyAuthRoute>
                 }
               />
@@ -228,7 +230,7 @@ const App = () => (
                 path="/profit-loss"
                 element={
                   <LazyAuthRoute requiredRole="admin">
-                    <Dashboard />
+                    <ProfitLoss />
                   </LazyAuthRoute>
                 }
               />

@@ -204,6 +204,65 @@ export type Database = {
           },
         ]
       }
+      personal_advances: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          interest_rate: number | null
+          issued_date: string
+          notes: string | null
+          purpose: string
+          repaid_date: string | null
+          repayment_terms: string | null
+          seller_lead_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          issued_date?: string
+          notes?: string | null
+          purpose: string
+          repaid_date?: string | null
+          repayment_terms?: string | null
+          seller_lead_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          issued_date?: string
+          notes?: string | null
+          purpose?: string
+          repaid_date?: string | null
+          repayment_terms?: string | null
+          seller_lead_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_advances_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
