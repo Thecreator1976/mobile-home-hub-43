@@ -205,6 +205,42 @@ export type Database = {
           },
         ]
       }
+      external_integrations: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_sync: string | null
+          service_name: string
+          updated_at: string | null
+          user_id: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          service_name: string
+          updated_at?: string | null
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_sync?: string | null
+          service_name?: string
+          updated_at?: string | null
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       lead_timeline: {
         Row: {
           action: string
@@ -462,6 +498,59 @@ export type Database = {
           zip?: string | null
         }
         Relationships: []
+      }
+      social_posts_queue: {
+        Row: {
+          content: string
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          external_post_id: string | null
+          id: string
+          media_urls: string[] | null
+          platform: string
+          scheduled_time: string | null
+          seller_lead_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platform: string
+          scheduled_time?: string | null
+          seller_lead_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_urls?: string[] | null
+          platform?: string
+          scheduled_time?: string | null
+          seller_lead_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_posts_queue_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

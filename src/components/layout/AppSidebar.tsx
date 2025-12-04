@@ -21,6 +21,7 @@ import {
   UserCog,
   Menu,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -56,6 +57,7 @@ const adminNavItems: NavItem[] = [
   { title: "User Management", href: "/admin/users", icon: UserCog, adminOnly: true },
   { title: "Profit & Loss", href: "/profit-loss", icon: BarChart3, adminOnly: true },
   { title: "Contract Templates", href: "/admin/contract-templates", icon: FileText, adminOnly: true },
+  { title: "Integrations", href: "/admin/integrations", icon: Zap, adminOnly: true },
   { title: "Settings", href: "/admin/settings", icon: Settings, adminOnly: true },
 ];
 

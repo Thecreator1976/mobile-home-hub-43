@@ -40,6 +40,7 @@ const ProfitLoss = lazy(() => import("./pages/ProfitLoss"));
 const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
 const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const Integrations = lazy(() => import("./pages/Integrations"));
 
 // Wrapper for lazy loaded protected routes
 const LazyAuthRoute = ({ 
@@ -256,6 +257,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute requiredRole="admin">
                     <Dashboard />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/admin/integrations"
+                element={
+                  <LazyAuthRoute requiredRole="admin">
+                    <Integrations />
                   </LazyAuthRoute>
                 }
               />
