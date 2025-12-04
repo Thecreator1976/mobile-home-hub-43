@@ -186,9 +186,11 @@ export default function SellerLeadDetail() {
                 Edit
               </Link>
             </Button>
-            <Button>
-              <FileText className="h-4 w-4 mr-2" />
-              Make Offer
+            <Button asChild>
+              <Link to={`/seller-leads/${lead.id}/make-offer`}>
+                <FileText className="h-4 w-4 mr-2" />
+                Make Offer
+              </Link>
             </Button>
           </div>
         </div>

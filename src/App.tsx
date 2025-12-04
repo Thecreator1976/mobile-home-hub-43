@@ -25,6 +25,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const SellerLeads = lazy(() => import("./pages/SellerLeads"));
 const SellerLeadDetail = lazy(() => import("./pages/SellerLeadDetail"));
 const NewSellerLead = lazy(() => import("./pages/NewSellerLead"));
+const MakeOffer = lazy(() => import("./pages/MakeOffer"));
 const Buyers = lazy(() => import("./pages/Buyers"));
 const NewBuyer = lazy(() => import("./pages/NewBuyer"));
 const ImportBuyers = lazy(() => import("./pages/ImportBuyers"));
@@ -97,6 +98,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute>
                     <SellerLeadDetail />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/seller-leads/:id/make-offer"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <MakeOffer />
                   </LazyAuthRoute>
                 }
               />
