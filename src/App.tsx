@@ -38,6 +38,7 @@ const NewPurchaseOrder = lazy(() => import("./pages/NewPurchaseOrder"));
 const PersonalAdvances = lazy(() => import("./pages/PersonalAdvances"));
 const ProfitLoss = lazy(() => import("./pages/ProfitLoss"));
 const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
+const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 
 // Wrapper for lazy loaded protected routes
@@ -239,6 +240,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute requiredRole="admin">
                     <AdminUsers />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/admin/contract-templates"
+                element={
+                  <LazyAuthRoute requiredRole="admin">
+                    <ContractTemplates />
                   </LazyAuthRoute>
                 }
               />
