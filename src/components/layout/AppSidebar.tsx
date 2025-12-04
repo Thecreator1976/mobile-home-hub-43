@@ -55,6 +55,7 @@ const toolsNavItems: NavItem[] = [
 const adminNavItems: NavItem[] = [
   { title: "User Management", href: "/admin/users", icon: UserCog, adminOnly: true },
   { title: "Profit & Loss", href: "/profit-loss", icon: BarChart3, adminOnly: true },
+  { title: "Contract Templates", href: "/admin/contract-templates", icon: FileText, adminOnly: true },
   { title: "Settings", href: "/admin/settings", icon: Settings, adminOnly: true },
 ];
 
