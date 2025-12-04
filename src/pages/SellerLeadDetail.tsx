@@ -34,6 +34,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PostToSocialButton } from "@/components/integrations/PostToSocialButton";
 import { CallWithOpenPhoneButton } from "@/components/integrations/CallWithOpenPhoneButton";
+import { SMSWithOpenPhoneButton } from "@/components/integrations/SMSWithOpenPhoneButton";
 
 const statusConfig: Record<LeadStatus, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-800" },
@@ -184,6 +185,7 @@ export default function SellerLeadDetail() {
           <div className="flex gap-2 flex-wrap">
             <PostToSocialButton lead={lead} />
             <CallWithOpenPhoneButton lead={lead} />
+            <SMSWithOpenPhoneButton lead={lead} />
             <Button variant="outline" asChild>
               <Link to={`/seller-leads/${lead.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
