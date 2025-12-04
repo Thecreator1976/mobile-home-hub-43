@@ -1,68 +1,55 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, Plus, Clock, MapPin, User, Loader2 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, startOfWeek, endOfWeek, parseISO } from "date-fns";
+import { useAppointments, Appointment } from "@/hooks/useAppointments";
 
-interface CalendarEvent {
-  id: string;
-  title: string;
-  type: "call" | "meeting" | "viewing" | "closing";
-  time: string;
-  contact: string;
-  location?: string;
-}
-
-const mockEvents: Record<string, CalendarEvent[]> = {
-  "2024-01-15": [
-    { id: "1", title: "Property Viewing", type: "viewing", time: "10:00 AM", contact: "John Smith", location: "123 Oak Lane" },
-    { id: "2", title: "Follow-up Call", type: "call", time: "2:30 PM", contact: "Mary Johnson" },
-  ],
-  "2024-01-16": [
-    { id: "3", title: "Contract Signing", type: "closing", time: "11:00 AM", contact: "Sarah Wilson", location: "Office" },
-  ],
-  "2024-01-18": [
-    { id: "4", title: "Virtual Meeting", type: "meeting", time: "3:00 PM", contact: "Robert Davis" },
-    { id: "5", title: "Property Inspection", type: "viewing", time: "9:00 AM", contact: "Jennifer Lee", location: "456 Pine St" },
-  ],
+const typeColors: Record<string, { bg: string; border: string; text: string }> = {
+  call: { bg: "bg-yellow-100", border: "border-l-yellow-500", text: "text-yellow-800" },
+  meeting: { bg: "bg-purple-100", border: "border-l-purple-500", text: "text-purple-800" },
+  property_viewing: { bg: "bg-blue-100", border: "border-l-blue-500", text: "text-blue-800" },
+  closing: { bg: "bg-green-100", border: "border-l-green-500", text: "text-green-800" },
 };
 
-const typeColors: Record<string, string> = {
-  call: "bg-status-contacted/20 border-status-contacted text-status-contacted",
-  meeting: "bg-status-new/20 border-status-new text-status-new",
-  viewing: "bg-status-offer/20 border-status-offer text-status-offer",
-  closing: "bg-status-contract/20 border-status-contract text-status-contract",
+const formatType = (type: string) => {
+  return type.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 };
 
 export default function CalendarPage() {
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 0, 15));
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const { appointments, isLoading } = useAppointments();
 
-  const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+  const monthStart = startOfMonth(currentDate);
+  const monthEnd = endOfMonth(currentDate);
+  const calendarStart = startOfWeek(monthStart);
+  const calendarEnd = endOfWeek(monthEnd);
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const getAppointmentsForDay = (day: Date): Appointment[] => {
+    return appointments.filter((apt) => {
+      const aptDate = parseISO(apt.start_time);
+      return isSameDay(aptDate, day);
+    });
+  };
+
+  const selectedDayAppointments = getAppointmentsForDay(selectedDate);
+  const monthAppointments = appointments.filter((apt) => {
+    const aptDate = parseISO(apt.start_time);
+    return isSameMonth(aptDate, currentDate);
+  });
 
   const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
-
-  const getDateKey = (day: number) => {
-    const month = String(currentDate.getMonth() + 1).padStart(2, "0");
-    const dayStr = String(day).padStart(2, "0");
-    return `${currentDate.getFullYear()}-${month}-${dayStr}`;
+  const goToToday = () => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDate(today);
   };
-
-  const calendarDays = [];
-  for (let i = 0; i < firstDayOfMonth; i++) {
-    calendarDays.push(null);
-  }
-  for (let day = 1; day <= daysInMonth; day++) {
-    calendarDays.push(day);
-  }
-
-  const selectedDateKey = getDateKey(currentDate.getDate());
-  const selectedEvents = mockEvents[selectedDateKey] || [];
 
   return (
     <DashboardLayout>
@@ -71,121 +58,186 @@ export default function CalendarPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
-            <p className="text-muted-foreground">Schedule and manage your appointments</p>
+            <p className="text-muted-foreground">View and manage all appointments</p>
           </div>
-          <Button variant="gradient">
-            <Plus className="h-4 w-4 mr-2" />
-            New Appointment
+          <Button asChild>
+            <Link to="/calendar/new">
+              <Plus className="h-4 w-4 mr-2" />
+              New Appointment
+            </Link>
           </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Calendar Grid */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle>{monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}</CardTitle>
+        {/* Calendar Controls */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-bold">{format(currentDate, "MMMM yyyy")}</h2>
                 <div className="flex gap-2">
                   <Button variant="outline" size="icon" onClick={prevMonth}>
                     <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" onClick={goToToday}>
+                    Today
                   </Button>
                   <Button variant="outline" size="icon" onClick={nextMonth}>
                     <ChevronRight className="h-4 w-4" />
                   </Button>
                 </div>
-              </CardHeader>
-              <CardContent>
-                {/* Day Headers */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {dayNames.map((day) => (
-                    <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                      {day}
-                    </div>
-                  ))}
-                </div>
-                {/* Calendar Days */}
-                <div className="grid grid-cols-7 gap-1">
-                  {calendarDays.map((day, index) => {
-                    if (day === null) {
-                      return <div key={`empty-${index}`} className="h-24" />;
-                    }
-                    const dateKey = getDateKey(day);
-                    const events = mockEvents[dateKey] || [];
-                    const isToday = day === 15; // Mock today
-                    const isSelected = day === currentDate.getDate();
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {monthAppointments.length} appointment{monthAppointments.length !== 1 ? "s" : ""} this month
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-                    return (
-                      <button
-                        key={day}
-                        onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day))}
-                        className={`h-24 p-2 rounded-lg text-left transition-colors hover:bg-muted/50 ${
-                          isSelected ? "bg-primary/10 ring-2 ring-primary" : ""
-                        } ${isToday ? "bg-muted" : ""}`}
-                      >
-                        <span className={`text-sm font-medium ${isToday ? "text-primary" : ""}`}>{day}</span>
-                        <div className="mt-1 space-y-1">
-                          {events.slice(0, 2).map((event) => (
-                            <div
-                              key={event.id}
-                              className={`text-xs px-1.5 py-0.5 rounded truncate border ${typeColors[event.type]}`}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Calendar Grid */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardContent className="p-0">
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-96">
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-7 gap-px bg-border">
+                    {/* Day Headers */}
+                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                      <div key={day} className="bg-muted p-3 text-center text-sm font-semibold">
+                        {day}
+                      </div>
+                    ))}
+
+                    {/* Calendar Days */}
+                    {calendarDays.map((day) => {
+                      const dayAppointments = getAppointmentsForDay(day);
+                      const isToday = isSameDay(day, new Date());
+                      const isCurrentMonth = isSameMonth(day, currentDate);
+                      const isSelected = isSameDay(day, selectedDate);
+
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          onClick={() => setSelectedDate(day)}
+                          className={`min-h-[100px] p-2 text-left transition-colors bg-background hover:bg-muted/50 ${
+                            !isCurrentMonth ? "opacity-40" : ""
+                          } ${isSelected ? "ring-2 ring-primary ring-inset" : ""}`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <span
+                              className={`text-sm font-medium ${
+                                isToday
+                                  ? "flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                                  : ""
+                              }`}
                             >
-                              {event.title}
-                            </div>
-                          ))}
-                          {events.length > 2 && (
-                            <span className="text-xs text-muted-foreground">+{events.length - 2} more</span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                              {format(day, "d")}
+                            </span>
+                            {isToday && (
+                              <span className="text-xs text-primary font-medium">Today</span>
+                            )}
+                          </div>
+
+                          <div className="mt-1 space-y-1">
+                            {dayAppointments.slice(0, 2).map((apt) => {
+                              const colors = typeColors[apt.type] || typeColors.call;
+                              return (
+                                <div
+                                  key={apt.id}
+                                  className={`text-xs px-1.5 py-0.5 rounded truncate border-l-2 ${colors.bg} ${colors.border} ${colors.text}`}
+                                >
+                                  {apt.title}
+                                </div>
+                              );
+                            })}
+                            {dayAppointments.length > 2 && (
+                              <span className="text-xs text-muted-foreground">
+                                +{dayAppointments.length - 2} more
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
           {/* Day Detail */}
-          <div>
+          <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">
-                  {monthNames[currentDate.getMonth()]} {currentDate.getDate()}, {currentDate.getFullYear()}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{format(selectedDate, "MMMM d, yyyy")}</CardTitle>
+                  <Button size="sm" variant="outline" asChild>
+                    <Link to={`/calendar/new?date=${format(selectedDate, "yyyy-MM-dd")}`}>
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add
+                    </Link>
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {selectedEvents.length === 0 ? (
+                {selectedDayAppointments.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No appointments scheduled</p>
                 ) : (
                   <div className="space-y-4">
-                    {selectedEvents.map((event) => (
-                      <div
-                        key={event.id}
-                        className={`p-4 rounded-lg border ${typeColors[event.type]}`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">{event.title}</h4>
-                          <Badge variant="outline" className="capitalize">{event.type}</Badge>
-                        </div>
-                        <div className="space-y-1 text-sm">
-                          <p className="flex items-center gap-2">
-                            <Clock className="h-3 w-3" />
-                            {event.time}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <User className="h-3 w-3" />
-                            {event.contact}
-                          </p>
-                          {event.location && (
+                    {selectedDayAppointments.map((apt) => {
+                      const colors = typeColors[apt.type] || typeColors.call;
+                      return (
+                        <div
+                          key={apt.id}
+                          className={`p-4 rounded-lg border-l-4 ${colors.bg} ${colors.border}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold">{apt.title}</h4>
+                            <Badge variant="outline" className="capitalize">
+                              {formatType(apt.type)}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-sm text-muted-foreground">
                             <p className="flex items-center gap-2">
-                              <MapPin className="h-3 w-3" />
-                              {event.location}
+                              <Clock className="h-3 w-3" />
+                              {format(parseISO(apt.start_time), "h:mm a")}
+                              {apt.end_time && ` - ${format(parseISO(apt.end_time), "h:mm a")}`}
                             </p>
-                          )}
+                            {apt.location && (
+                              <p className="flex items-center gap-2">
+                                <MapPin className="h-3 w-3" />
+                                {apt.location}
+                              </p>
+                            )}
+                            {apt.description && (
+                              <p className="mt-2 text-foreground">{apt.description}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* Legend */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Legend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(typeColors).map(([type, colors]) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded border-l-2 ${colors.bg} ${colors.border}`} />
+                      <span className="text-sm capitalize">{formatType(type)}</span>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
