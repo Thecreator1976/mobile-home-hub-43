@@ -39,6 +39,7 @@ const PersonalAdvances = lazy(() => import("./pages/PersonalAdvances"));
 const ProfitLoss = lazy(() => import("./pages/ProfitLoss"));
 const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
 const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
+const Contracts = lazy(() => import("./pages/Contracts"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const Integrations = lazy(() => import("./pages/Integrations"));
 
@@ -224,7 +225,7 @@ const App = () => (
                 path="/contracts"
                 element={
                   <LazyAuthRoute>
-                    <Dashboard />
+                    <Contracts />
                   </LazyAuthRoute>
                 }
               />

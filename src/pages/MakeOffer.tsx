@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +11,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useSellerLead } from "@/hooks/useSellerLeads";
+import { useContracts } from "@/hooks/useContracts";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, FileText, Loader2, Check, Send, Download, Edit, DollarSign, Calendar, User, Home, Sparkles, Info } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Check, Send, Download, Edit, DollarSign, Calendar, User, Home, Sparkles, Info, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { SendToDocuSignButton } from "@/components/integrations/SendToDocuSignButton";
 import { ContractTemplateSelector } from "@/components/contracts/ContractTemplateSelector";
@@ -23,7 +24,9 @@ export default function MakeOffer() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: lead, isLoading } = useSellerLead(id);
+  const { createContract, isCreating } = useContracts();
   
+  const [savedContractId, setSavedContractId] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState("offer");
   const [generating, setGenerating] = useState(false);
@@ -111,11 +114,28 @@ export default function MakeOffer() {
       setContractContent(data.contract);
       setActiveTab("review");
 
+      // Auto-save contract to database
+      try {
+        const savedContract = await createContract({
+          seller_lead_id: lead.id,
+          template_id: selectedTemplate?.id || null,
+          template_name: selectedTemplate?.name || `AI Generated (${contractType})`,
+          content: data.contract,
+          status: "draft",
+          contract_type: contractType,
+          offer_data: offerData,
+        });
+        setSavedContractId(savedContract.id);
+      } catch (saveError) {
+        console.error("Error saving contract:", saveError);
+        // Continue even if save fails - user can still download
+      }
+
       toast({
-        title: "Contract Generated",
+        title: "Contract Generated & Saved",
         description: selectedTemplate 
-          ? `Contract generated using "${selectedTemplate.name}" template.`
-          : "AI has generated your contract from scratch.",
+          ? `Contract generated using "${selectedTemplate.name}" template and saved.`
+          : "AI has generated your contract from scratch and saved it.",
       });
     } catch (error: any) {
       console.error("Error generating contract:", error);
@@ -591,14 +611,24 @@ export default function MakeOffer() {
                 </div>
 
                 <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded-lg p-4">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-600" />
-                    <div>
-                      <h4 className="font-medium text-green-900 dark:text-green-100">Contract Ready</h4>
-                      <p className="text-sm text-green-700 dark:text-green-300">
-                        The contract has been generated successfully. Save it or download for offline use.
-                      </p>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-5 w-5 text-green-600" />
+                      <div>
+                        <h4 className="font-medium text-green-900 dark:text-green-100">Contract Saved</h4>
+                        <p className="text-sm text-green-700 dark:text-green-300">
+                          The contract has been generated and saved to your contracts.
+                        </p>
+                      </div>
                     </div>
+                    {savedContractId && (
+                      <Link to="/contracts">
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View in Contracts
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </CardContent>
