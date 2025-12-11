@@ -77,9 +77,9 @@ export default function Register() {
     } else {
       toast({
         title: "Account created!",
-        description: "Welcome to MobileHome CRM. You're now logged in.",
+        description: "Please check your email to verify your account, then wait for admin approval.",
       });
-      navigate("/dashboard", { replace: true });
+      navigate("/verify-email", { replace: true });
     }
   };
 

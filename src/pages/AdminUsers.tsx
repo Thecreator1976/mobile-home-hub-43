@@ -19,11 +19,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, Shield, Loader2 } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Loader2, DollarSign } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { StatCardSkeleton } from "@/components/ui/loading";
+import { Switch } from "@/components/ui/switch";
 
 interface UserWithRole {
   id: string;
@@ -33,6 +34,8 @@ interface UserWithRole {
   status: string | null;
   created_at: string;
   role: string;
+  is_paid: boolean;
+  subscription_tier: string | null;
 }
 
 export default function AdminUsers() {
@@ -43,6 +46,7 @@ export default function AdminUsers() {
   const [updating, setUpdating] = useState(false);
   const [newRole, setNewRole] = useState<string>("");
   const [newStatus, setNewStatus] = useState<string>("");
+  const [newIsPaid, setNewIsPaid] = useState<boolean>(false);
 
   useEffect(() => {
     fetchUsers();
@@ -76,6 +80,8 @@ export default function AdminUsers() {
           status: profile.status,
           created_at: profile.created_at,
           role: userRole?.role || "viewer",
+          is_paid: profile.is_paid ?? false,
+          subscription_tier: profile.subscription_tier,
         };
       });
 
@@ -95,6 +101,7 @@ export default function AdminUsers() {
     setSelectedUser(user);
     setNewRole(user.role);
     setNewStatus(user.status || "pending");
+    setNewIsPaid(user.is_paid);
     setDialogOpen(true);
   };
 
@@ -103,10 +110,24 @@ export default function AdminUsers() {
 
     setUpdating(true);
     try {
-      // Update profile status
+      // Update profile status and payment
+      const updateData: { status: string; is_paid: boolean; subscription_tier?: string; subscription_expires_at?: string | null } = {
+        status: newStatus,
+        is_paid: newIsPaid,
+      };
+      
+      // Set subscription tier and expiry based on paid status
+      if (newIsPaid && !selectedUser.is_paid) {
+        updateData.subscription_tier = 'pro';
+        updateData.subscription_expires_at = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (!newIsPaid) {
+        updateData.subscription_tier = 'free';
+        updateData.subscription_expires_at = null;
+      }
+      
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ status: newStatus })
+        .update(updateData)
         .eq("user_id", selectedUser.user_id);
 
       if (profileError) throw profileError;
@@ -182,6 +203,16 @@ export default function AdminUsers() {
       ),
     },
     {
+      key: "is_paid",
+      header: "Paid",
+      sortable: true,
+      render: (user) => (
+        <Badge variant={user.is_paid ? "default" : "outline"} className={user.is_paid ? "bg-status-closed text-white" : ""}>
+          {user.is_paid ? "Paid" : "Free"}
+        </Badge>
+      ),
+    },
+    {
       key: "created_at",
       header: "Joined",
       sortable: true,
@@ -203,6 +234,7 @@ export default function AdminUsers() {
     active: users.filter((u) => u.status === "active").length,
     pending: users.filter((u) => u.status === "pending" || !u.status).length,
     admins: users.filter((u) => u.role === "admin").length,
+    paid: users.filter((u) => u.is_paid).length,
   };
 
   return (
@@ -215,9 +247,10 @@ export default function AdminUsers() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {isLoading ? (
             <>
+              <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
@@ -250,6 +283,15 @@ export default function AdminUsers() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-status-offer">{stats.pending}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium">Paid</CardTitle>
+                  <DollarSign className="h-4 w-4 text-status-closed" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-status-closed">{stats.paid}</div>
                 </CardContent>
               </Card>
               <Card>
@@ -328,6 +370,22 @@ export default function AdminUsers() {
                 <p className="text-xs text-muted-foreground">
                   Only active users can access the CRM.
                 </p>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Payment Status</label>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium">Paid Subscription</p>
+                    <p className="text-xs text-muted-foreground">
+                      {newIsPaid ? "User has full access" : "User needs to subscribe"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={newIsPaid}
+                    onCheckedChange={setNewIsPaid}
+                  />
+                </div>
               </div>
             </div>
 
