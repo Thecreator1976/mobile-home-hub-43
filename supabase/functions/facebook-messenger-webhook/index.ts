@@ -65,15 +65,16 @@ Deno.serve(async (req) => {
       const body = await req.text();
       const signature = req.headers.get("x-hub-signature-256");
 
-      // Verify signature
-      if (signature) {
-        const isValid = await verifySignature(body, signature, appSecret);
-        if (!isValid) {
-          console.error("Invalid signature");
-          return new Response("Invalid signature", { status: 401, headers: corsHeaders });
-        }
-      } else {
-        console.warn("No signature header present - proceeding anyway for testing");
+      // Verify signature - REQUIRED for security
+      if (!signature) {
+        console.error("Missing signature header");
+        return new Response("Missing signature", { status: 401, headers: corsHeaders });
+      }
+
+      const isValid = await verifySignature(body, signature, appSecret);
+      if (!isValid) {
+        console.error("Invalid signature");
+        return new Response("Invalid signature", { status: 401, headers: corsHeaders });
       }
 
       const data = JSON.parse(body);
