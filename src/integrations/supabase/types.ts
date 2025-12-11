@@ -161,6 +161,72 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          content: string
+          contract_type: string | null
+          created_at: string
+          created_by: string | null
+          docusign_envelope_id: string | null
+          id: string
+          offer_data: Json | null
+          seller_lead_id: string | null
+          sent_at: string | null
+          signed_at: string | null
+          status: string
+          template_id: string | null
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          docusign_envelope_id?: string | null
+          id?: string
+          offer_data?: Json | null
+          seller_lead_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          docusign_envelope_id?: string | null
+          id?: string
+          offer_data?: Json | null
+          seller_lead_id?: string | null
+          sent_at?: string | null
+          signed_at?: string | null
+          status?: string
+          template_id?: string | null
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "contract_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           amount: number
