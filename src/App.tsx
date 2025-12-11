@@ -18,6 +18,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import PendingApproval from "./pages/PendingApproval";
+import PaymentRequired from "./pages/PaymentRequired";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages (code splitting)
@@ -77,6 +78,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
+            <Route path="/payment-required" element={<PaymentRequired />} />
 
               {/* Protected Routes with Lazy Loading */}
               <Route

@@ -538,7 +538,10 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_paid: boolean | null
           status: string | null
+          subscription_expires_at: string | null
+          subscription_tier: string | null
           updated_at: string
           user_id: string
         }
@@ -548,7 +551,10 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          is_paid?: boolean | null
           status?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
           user_id: string
         }
@@ -558,7 +564,10 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_paid?: boolean | null
           status?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -31,11 +31,11 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
         return;
       }
 
-      // Check profile status
+      // Check profile status and payment
       const checkProfile = async () => {
         const { data, error } = await supabase
           .from("profiles")
-          .select("status")
+          .select("status, is_paid")
           .eq("user_id", user.id)
           .single();
 
@@ -45,6 +45,15 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
           // Redirect based on profile status
           if (data.status === "pending") {
             navigate("/pending-approval", { replace: true });
+            setCheckingProfile(false);
+            return;
+          }
+          
+          // Check payment status for active users
+          if (data.status === "active" && !data.is_paid) {
+            navigate("/payment-required", { replace: true });
+            setCheckingProfile(false);
+            return;
           }
         }
         setCheckingProfile(false);
