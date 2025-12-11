@@ -11,3 +11,9 @@ verify_jwt = true
 
 [functions.send-contract-notification]
 verify_jwt = true
+
+[functions.facebook-messenger-webhook]
+verify_jwt = false
+
+[functions.facebook-send-message]
+verify_jwt = true

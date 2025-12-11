@@ -22,6 +22,7 @@ import {
   Menu,
   X,
   Zap,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -40,6 +41,7 @@ const mainNavItems: NavItem[] = [
   { title: "Buyers", href: "/buyers", icon: UserCheck },
   { title: "Calendar", href: "/calendar", icon: Calendar },
   { title: "Appointments", href: "/appointments", icon: ClipboardList },
+  { title: "Messenger", href: "/messenger", icon: MessageSquare },
 ];
 
 const financeNavItems: NavItem[] = [

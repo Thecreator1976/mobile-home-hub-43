@@ -42,6 +42,7 @@ const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const ContractDetail = lazy(() => import("./pages/ContractDetail"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
+const MessengerInbox = lazy(() => import("./pages/MessengerInbox"));
 const Integrations = lazy(() => import("./pages/Integrations"));
 
 // Wrapper for lazy loaded protected routes
@@ -171,6 +172,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute>
                     <CalendarPage />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/messenger"
+                element={
+                  <LazyAuthRoute>
+                    <MessengerInbox />
                   </LazyAuthRoute>
                 }
               />

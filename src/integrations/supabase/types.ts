@@ -377,6 +377,101 @@ export type Database = {
           },
         ]
       }
+      messenger_conversations: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          created_by: string | null
+          facebook_user_id: string
+          facebook_user_name: string | null
+          id: string
+          last_message_at: string | null
+          profile_pic_url: string | null
+          seller_lead_id: string | null
+          status: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          facebook_user_id: string
+          facebook_user_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          profile_pic_url?: string | null
+          seller_lead_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          facebook_user_id?: string
+          facebook_user_name?: string | null
+          id?: string
+          last_message_at?: string | null
+          profile_pic_url?: string | null
+          seller_lead_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messenger_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string | null
+          direction: string
+          facebook_message_id: string | null
+          id: string
+          message_type: string | null
+          read_at: string | null
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string | null
+          direction: string
+          facebook_message_id?: string | null
+          id?: string
+          message_type?: string | null
+          read_at?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string | null
+          direction?: string
+          facebook_message_id?: string | null
+          id?: string
+          message_type?: string | null
+          read_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messenger_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "messenger_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personal_advances: {
         Row: {
           amount: number
