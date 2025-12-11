@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,9 +38,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useContracts, Contract } from "@/hooks/useContracts";
+import { useContracts, Contract, useUpdateContractWithHistory } from "@/hooks/useContracts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import {
   FileText,
   Search,
@@ -51,6 +53,8 @@ import {
   Send,
   ExternalLink,
   Filter,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -63,13 +67,16 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 
 export default function Contracts() {
   const navigate = useNavigate();
-  const { contracts, isLoading, deleteContract, updateContract, isDeleting } = useContracts();
+  const { toast } = useToast();
+  const { contracts, isLoading, deleteContract, isDeleting } = useContracts();
+  const updateContractWithHistory = useUpdateContractWithHistory();
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
 
   const filteredContracts = contracts.filter((contract) => {
     const matchesSearch =
@@ -104,11 +111,80 @@ export default function Contracts() {
   };
 
   const handleMarkAsSent = async (contract: Contract) => {
-    await updateContract({
+    await updateContractWithHistory.mutateAsync({
       id: contract.id,
       status: "sent",
       sent_at: new Date().toISOString(),
+      _statusNotes: "Marked as sent",
     });
+  };
+
+  const handleRegenerate = async (contract: Contract) => {
+    if (!contract.seller_lead_id) {
+      toast({ title: "Error", description: "No lead associated with this contract.", variant: "destructive" });
+      return;
+    }
+    
+    setRegeneratingId(contract.id);
+    try {
+      const { data: lead, error: leadError } = await supabase
+        .from("seller_leads")
+        .select("*")
+        .eq("id", contract.seller_lead_id)
+        .single();
+
+      if (leadError || !lead) throw new Error("Lead not found");
+
+      let templateContent = undefined;
+      if (contract.template_id) {
+        const { data: template } = await supabase
+          .from("contract_templates")
+          .select("content")
+          .eq("id", contract.template_id)
+          .single();
+        templateContent = template?.content;
+      }
+
+      const { data, error } = await supabase.functions.invoke("generate-contract", {
+        body: {
+          leadData: {
+            name: lead.name,
+            phone: lead.phone,
+            email: lead.email,
+            address: lead.address,
+            city: lead.city,
+            state: lead.state,
+            zip: lead.zip,
+            home_type: lead.home_type || "single",
+            year_built: lead.year_built,
+            asking_price: lead.asking_price,
+            target_offer: lead.target_offer,
+            lot_rent: lead.lot_rent,
+            condition: lead.condition,
+            notes: lead.notes,
+          },
+          offerData: contract.offer_data || {},
+          templateContent,
+          templateId: contract.template_id,
+          customizationNotes: lead.notes,
+          contractType: contract.contract_type || "purchase_agreement",
+        },
+      });
+
+      if (error) throw error;
+
+      await updateContractWithHistory.mutateAsync({
+        id: contract.id,
+        content: data.contract,
+        _statusNotes: "Contract regenerated",
+      });
+
+      toast({ title: "Contract Regenerated", description: "The contract has been regenerated successfully." });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to regenerate contract.", variant: "destructive" });
+    } finally {
+      setRegeneratingId(null);
+    }
   };
 
   return (
@@ -203,8 +279,13 @@ export default function Contracts() {
                   <TableBody>
                     {filteredContracts.map((contract) => {
                       const status = statusConfig[contract.status] || statusConfig.draft;
+                      const isRegenerating = regeneratingId === contract.id;
                       return (
-                        <TableRow key={contract.id}>
+                        <TableRow 
+                          key={contract.id} 
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/contracts/${contract.id}`)}
+                        >
                           <TableCell>
                             <div>
                               <p className="font-medium">{contract.seller_lead?.name || "Unknown"}</p>
@@ -225,21 +306,37 @@ export default function Contracts() {
                               {format(new Date(contract.created_at), "MMM d, yyyy")}
                             </span>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
+                                  {isRegenerating ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setSelectedContract(contract)}>
+                                <DropdownMenuItem onClick={() => navigate(`/contracts/${contract.id}`)}>
                                   <Eye className="mr-2 h-4 w-4" />
-                                  View Contract
+                                  View Details
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSelectedContract(contract)}>
+                                  <FileText className="mr-2 h-4 w-4" />
+                                  Quick Preview
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDownload(contract)}>
                                   <Download className="mr-2 h-4 w-4" />
                                   Download
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleRegenerate(contract)}
+                                  disabled={isRegenerating || !contract.seller_lead_id}
+                                >
+                                  <RefreshCw className="mr-2 h-4 w-4" />
+                                  Regenerate
                                 </DropdownMenuItem>
                                 {contract.seller_lead && (
                                   <DropdownMenuItem

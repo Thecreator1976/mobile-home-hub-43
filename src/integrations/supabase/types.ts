@@ -128,6 +128,44 @@ export type Database = {
         }
         Relationships: []
       }
+      contract_status_history: {
+        Row: {
+          changed_by: string | null
+          contract_id: string
+          created_at: string
+          id: string
+          new_status: string
+          notes: string | null
+          old_status: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          contract_id: string
+          created_at?: string
+          id?: string
+          new_status: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          contract_id?: string
+          created_at?: string
+          id?: string
+          new_status?: string
+          notes?: string | null
+          old_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_status_history_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contract_templates: {
         Row: {
           category: string
