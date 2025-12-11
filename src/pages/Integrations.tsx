@@ -60,6 +60,14 @@ import { format } from "date-fns";
 
 const INTEGRATION_TYPES = [
   {
+    id: "facebook_messenger",
+    name: "Facebook Messenger",
+    description: "Receive and respond to Facebook Messenger leads",
+    icon: MessageSquare,
+    color: "bg-blue-600",
+    features: ["Inbox", "Auto-Replies", "Buyer List Link", "Convert to Buyer"],
+  },
+  {
     id: "facebook_posting",
     name: "Facebook Posting",
     description: "Post listings to Facebook Page via Zapier/n8n",
@@ -394,6 +402,37 @@ export default function Integrations() {
           </CardHeader>
           <CardContent>
             <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="facebook-messenger">
+                <AccordionTrigger>
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-blue-600" />
+                    Facebook Messenger Integration
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside ml-4">
+                    <li>Create a Facebook App at developers.facebook.com</li>
+                    <li>Add the Messenger product to your app</li>
+                    <li>Generate a Page Access Token for your Facebook Page</li>
+                    <li>Copy your App Secret from App Settings → Basic</li>
+                    <li>Create a Verify Token (any random string you choose)</li>
+                    <li>Configure the webhook URL in your Facebook App:
+                      <code className="block bg-muted px-2 py-1 rounded mt-1 text-xs break-all">
+                        {`https://ogyiyfwzsphyvetxvqpr.supabase.co/functions/v1/facebook-messenger-webhook`}
+                      </code>
+                    </li>
+                    <li>Subscribe to messages, messaging_postbacks events</li>
+                    <li>Add your credentials via Supabase Secrets (FACEBOOK_PAGE_ACCESS_TOKEN, FACEBOOK_APP_SECRET, FACEBOOK_VERIFY_TOKEN, FACEBOOK_PAGE_ID)</li>
+                    <li>Set your Buyer List URL in the integration config</li>
+                  </ol>
+                  <Button variant="link" className="px-0 h-auto mt-2" asChild>
+                    <a href="https://developers.facebook.com/docs/messenger-platform" target="_blank" rel="noopener noreferrer">
+                      View Facebook Messenger Docs <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  </Button>
+                </AccordionContent>
+              </AccordionItem>
+
               <AccordionItem value="facebook">
                 <AccordionTrigger>
                   <div className="flex items-center gap-2">
