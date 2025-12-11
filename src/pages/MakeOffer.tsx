@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useSellerLead } from "@/hooks/useSellerLeads";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, FileText, Loader2, Check, Send, Download, Edit, DollarSign, Calendar, User, Home, Sparkles } from "lucide-react";
+import { ArrowLeft, FileText, Loader2, Check, Send, Download, Edit, DollarSign, Calendar, User, Home, Sparkles, Info } from "lucide-react";
 import { format } from "date-fns";
 import { SendToDocuSignButton } from "@/components/integrations/SendToDocuSignButton";
+import { ContractTemplateSelector } from "@/components/contracts/ContractTemplateSelector";
+import { ContractTemplate } from "@/hooks/useContractTemplates";
 
 export default function MakeOffer() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +29,7 @@ export default function MakeOffer() {
   const [generating, setGenerating] = useState(false);
   const [contractContent, setContractContent] = useState("");
   const [contractType, setContractType] = useState<"purchase_agreement" | "option_agreement" | "assignment">("purchase_agreement");
+  const [selectedTemplate, setSelectedTemplate] = useState<ContractTemplate | null>(null);
 
   const [offerData, setOfferData] = useState({
     purchasePrice: 0,
@@ -66,6 +69,8 @@ export default function MakeOffer() {
         body: {
           leadData: {
             name: lead.name,
+            phone: lead.phone,
+            email: lead.email,
             address: lead.address,
             city: lead.city,
             state: lead.state,
@@ -74,10 +79,24 @@ export default function MakeOffer() {
             year_built: lead.year_built,
             asking_price: lead.asking_price,
             target_offer: offerData.purchasePrice,
+            lot_rent: lead.lot_rent,
+            condition: lead.condition,
+            notes: lead.notes,
           },
+          offerData: {
+            purchasePrice: offerData.purchasePrice,
+            earnestMoney: offerData.earnestMoney,
+            closingDate: offerData.closingDate,
+            financing: offerData.financing,
+            inspectionPeriod: offerData.inspectionPeriod,
+            specialTerms: offerData.specialTerms,
+            buyerName: offerData.buyerName,
+            buyerAddress: offerData.buyerAddress,
+          },
+          templateContent: selectedTemplate?.content || undefined,
+          templateId: selectedTemplate?.id || undefined,
+          customizationNotes: lead.notes || undefined,
           contractType,
-          buyerName: offerData.buyerName || undefined,
-          buyerAddress: offerData.buyerAddress || undefined,
         },
       });
 
@@ -94,7 +113,9 @@ export default function MakeOffer() {
 
       toast({
         title: "Contract Generated",
-        description: "AI has generated your contract. Please review it carefully.",
+        description: selectedTemplate 
+          ? `Contract generated using "${selectedTemplate.name}" template.`
+          : "AI has generated your contract from scratch.",
       });
     } catch (error: any) {
       console.error("Error generating contract:", error);
@@ -436,6 +457,7 @@ export default function MakeOffer() {
                 <CardDescription>Generate a professional contract using AI</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                {/* Contract Summary */}
                 <div className="bg-muted/50 rounded-lg p-4 border">
                   <h4 className="font-medium mb-3">Contract Summary</h4>
                   <div className="grid gap-2 sm:grid-cols-2 text-sm">
@@ -458,43 +480,78 @@ export default function MakeOffer() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Contract Type</Label>
-                  <Select
-                    value={contractType}
-                    onValueChange={(value: any) => setContractType(value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="purchase_agreement">Purchase Agreement</SelectItem>
-                      <SelectItem value="option_agreement">Option Agreement</SelectItem>
-                      <SelectItem value="assignment">Assignment Contract</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Template Selector */}
+                <ContractTemplateSelector
+                  selectedTemplateId={selectedTemplate?.id || null}
+                  onTemplateSelect={setSelectedTemplate}
+                />
+
+                {/* Customization Notes from Lead */}
+                {lead.notes && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Customization Instructions (from Lead Notes)
+                    </Label>
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
+                      <p className="text-sm whitespace-pre-wrap">{lead.notes}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      The AI will use these notes to customize the contract with specific terms and clauses.
+                    </p>
+                  </div>
+                )}
+
+                {/* Contract Type (only show if no template selected) */}
+                {!selectedTemplate && (
+                  <div className="space-y-2">
+                    <Label>Contract Type</Label>
+                    <Select
+                      value={contractType}
+                      onValueChange={(value: any) => setContractType(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="purchase_agreement">Purchase Agreement</SelectItem>
+                        <SelectItem value="option_agreement">Option Agreement</SelectItem>
+                        <SelectItem value="assignment">Assignment Contract</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="flex flex-col items-center gap-4 py-4">
                   <Button onClick={generateContract} disabled={generating} size="lg" className="px-8">
                     {generating ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating Contract...
+                        {selectedTemplate ? "Generating from Template..." : "Generating Contract..."}
                       </>
                     ) : (
                       <>
                         <Sparkles className="mr-2 h-4 w-4" />
-                        Generate AI Contract
+                        {selectedTemplate ? "Generate from Template" : "Generate AI Contract"}
                       </>
                     )}
                   </Button>
 
                   {generating && (
                     <p className="text-sm text-muted-foreground text-center">
-                      Our AI is crafting a professional mobile home purchase agreement...
-                      <br />
-                      This usually takes 10-20 seconds.
+                      {selectedTemplate ? (
+                        <>
+                          Using your "{selectedTemplate.name}" template as the base...
+                          <br />
+                          Applying customizations and filling in placeholders.
+                        </>
+                      ) : (
+                        <>
+                          Our AI is crafting a professional contract from scratch...
+                          <br />
+                          This usually takes 10-20 seconds.
+                        </>
+                      )}
                     </p>
                   )}
                 </div>
