@@ -29,9 +29,15 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
     navigate("/login");
   };
 
-  const userInitials = user?.email
-    ? user.email.substring(0, 2).toUpperCase()
-    : "U";
+  const handleNavigateToSettings = () => {
+    if (userRole === "admin") {
+      navigate("/admin/settings");
+    } else {
+      navigate("/dashboard"); // Or a general settings page if you have one
+    }
+  };
+
+  const userInitials = user?.email ? user.email.substring(0, 2).toUpperCase() : "U";
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "User";
 
@@ -40,19 +46,14 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
       className={cn(
         "fixed top-0 right-0 z-30 h-16 bg-background/80 backdrop-blur-md border-b border-border transition-all duration-300",
         sidebarCollapsed ? "lg:left-16" : "lg:left-64",
-        "left-0"
+        "left-0",
       )}
     >
       <div className="flex items-center justify-between h-full px-4 lg:px-6">
         {/* Left: Mobile Menu + Date */}
         <div className="flex items-center gap-4">
           {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden"
-            onClick={onMenuClick}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuClick}>
             <Menu className="h-5 w-5" />
           </Button>
 
@@ -61,9 +62,7 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
             <h1 className="text-sm lg:text-base font-semibold text-foreground">
               {format(new Date(), "EEEE, MMMM d, yyyy")}
             </h1>
-            <p className="text-xs lg:text-sm text-muted-foreground">
-              Welcome back, {displayName}
-            </p>
+            <p className="text-xs lg:text-sm text-muted-foreground">Welcome back, {displayName}</p>
           </div>
         </div>
 
@@ -87,29 +86,19 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => navigate("/seller-leads/new")}>
-                New Seller Lead
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/buyers")}>
+              <DropdownMenuItem onClick={() => navigate("/seller-leads/new")}>New Seller Lead</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/buyers/new")}>
+                {/* FIXED: Changed from /buyers to /buyers/new */}
                 New Buyer
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/calendar")}>
-                New Appointment
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/calendar")}>New Appointment</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/expenses")}>
-                New Expense
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/expenses")}>New Expense</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           {/* Mobile Quick Add */}
-          <Button
-            variant="gradient"
-            size="icon"
-            className="sm:hidden"
-            onClick={() => navigate("/seller-leads/new")}
-          >
+          <Button variant="gradient" size="icon" className="sm:hidden" onClick={() => navigate("/seller-leads/new")}>
             <Plus className="h-4 w-4" />
           </Button>
 
@@ -124,9 +113,7 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
             <DropdownMenuContent align="end" className="w-80">
               <DropdownMenuLabel>Notifications</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <div className="py-4 text-center text-sm text-muted-foreground">
-                No new notifications
-              </div>
+              <div className="py-4 text-center text-sm text-muted-foreground">No new notifications</div>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -136,9 +123,7 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
                   <AvatarImage src="" alt="User" />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-                    {userInitials}
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">{userInitials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -146,16 +131,13 @@ export function TopBar({ sidebarCollapsed = false, onMenuClick }: TopBarProps) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
-                    {user?.email}
-                  </p>
-                  <p className="text-xs leading-none text-muted-foreground capitalize">
-                    Role: {userRole || "viewer"}
-                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                  <p className="text-xs leading-none text-muted-foreground capitalize">Role: {userRole || "viewer"}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
+              <DropdownMenuItem onClick={handleNavigateToSettings}>
+                {/* FIXED: Added proper navigation handler */}
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>
