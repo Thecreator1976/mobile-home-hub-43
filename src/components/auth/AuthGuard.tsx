@@ -15,6 +15,7 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const location = useLocation();
   const [profileStatus, setProfileStatus] = useState<string | null>(null);
   const [checkingProfile, setCheckingProfile] = useState(true);
+  const [roleChecked, setRoleChecked] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -41,14 +42,14 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
         if (!error && data) {
           setProfileStatus(data.status);
-          
+
           // Redirect based on profile status
           if (data.status === "pending") {
             navigate("/pending-approval", { replace: true });
             setCheckingProfile(false);
             return;
           }
-          
+
           // Check payment status for active users
           if (data.status === "active" && !data.is_paid) {
             navigate("/payment-required", { replace: true });
@@ -57,25 +58,31 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
           }
         }
         setCheckingProfile(false);
+        setRoleChecked(true); // Profile check done, now check role
       };
 
       checkProfile();
     }
   }, [user, isLoading, navigate, location]);
 
+  // Separate useEffect for role checking - only run AFTER profile is verified
   useEffect(() => {
-    if (!isLoading && user && requiredRole) {
+    if (!checkingProfile && !isLoading && user && requiredRole && roleChecked) {
       const roleHierarchy = { admin: 3, agent: 2, viewer: 1 };
       const userRoleLevel = roleHierarchy[userRole || "viewer"];
       const requiredRoleLevel = roleHierarchy[requiredRole];
 
+      // Only redirect if user doesn't have required role
       if (userRoleLevel < requiredRoleLevel) {
+        console.log(`Access denied. User role: ${userRole}, Required: ${requiredRole}`);
         navigate("/dashboard", { replace: true });
+        return;
       }
     }
-  }, [user, userRole, requiredRole, isLoading, navigate]);
+  }, [user, userRole, requiredRole, isLoading, navigate, checkingProfile, roleChecked]);
 
-  if (isLoading || checkingProfile) {
+  // Show loading state
+  if (isLoading || checkingProfile || !roleChecked) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
