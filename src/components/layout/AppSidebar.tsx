@@ -33,10 +33,11 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   adminOnly?: boolean;
+  exact?: boolean;
 }
 
 const mainNavItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard, exact: true },
   { title: "Seller Leads", href: "/seller-leads", icon: Users },
   { title: "Buyers", href: "/buyers", icon: UserCheck },
   { title: "Calendar", href: "/calendar", icon: Calendar },
@@ -76,7 +77,7 @@ export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen 
   const isAdmin = userRole === "admin";
 
   const NavSection = ({ title, items }: { title: string; items: NavItem[] }) => {
-    const filteredItems = items.filter(item => !item.adminOnly || isAdmin);
+    const filteredItems = items.filter((item) => !item.adminOnly || isAdmin);
     if (filteredItems.length === 0) return null;
 
     return (
@@ -87,19 +88,21 @@ export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen 
           </h3>
         )}
         {filteredItems.map((item) => {
-          const isActive = location.pathname === item.href || 
-            (item.href !== "/dashboard" && location.pathname.startsWith(item.href));
+          const isActive = item.exact ? location.pathname === item.href : location.pathname.startsWith(item.href);
           return (
             <NavLink
               key={item.href}
               to={item.href}
+              end={item.exact}
               onClick={() => setMobileOpen(false)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
+              className={({ isActive: navIsActive }) =>
+                cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
+                  navIsActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                )
+              }
             >
               <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-sidebar-primary-foreground")} />
               {!collapsed && (
@@ -184,7 +187,7 @@ export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen 
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-300 lg:hidden",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {sidebarContent}
@@ -194,7 +197,7 @@ export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen 
       <aside
         className={cn(
           "hidden lg:flex fixed left-0 top-0 z-40 h-screen bg-sidebar border-r border-sidebar-border flex-col transition-all duration-300",
-          collapsed ? "w-16" : "w-64"
+          collapsed ? "w-16" : "w-64",
         )}
       >
         {sidebarContent}

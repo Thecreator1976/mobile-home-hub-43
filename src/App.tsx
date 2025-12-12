@@ -45,19 +45,18 @@ const ContractDetail = lazy(() => import("./pages/ContractDetail"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
 const MessengerInbox = lazy(() => import("./pages/MessengerInbox"));
 const Integrations = lazy(() => import("./pages/Integrations"));
+const Settings = lazy(() => import("./pages/Settings")); // Added Settings import
 
 // Wrapper for lazy loaded protected routes
-const LazyAuthRoute = ({ 
-  children, 
-  requiredRole 
-}: { 
-  children: React.ReactNode; 
+const LazyAuthRoute = ({
+  children,
+  requiredRole,
+}: {
+  children: React.ReactNode;
   requiredRole?: "admin" | "agent" | "viewer";
 }) => (
   <AuthGuard requiredRole={requiredRole}>
-    <Suspense fallback={<FullPageLoader text="Loading page..." />}>
-      {children}
-    </Suspense>
+    <Suspense fallback={<FullPageLoader text="Loading page..." />}>{children}</Suspense>
   </AuthGuard>
 );
 
@@ -70,15 +69,15 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
-            <Route path="/pending-approval" element={<PendingApproval />} />
-            <Route path="/payment-required" element={<PaymentRequired />} />
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/pending-approval" element={<PendingApproval />} />
+              <Route path="/payment-required" element={<PaymentRequired />} />
 
               {/* Protected Routes with Lazy Loading */}
               <Route
@@ -178,18 +177,18 @@ const App = () => (
                 }
               />
               <Route
-                path="/messenger"
-                element={
-                  <LazyAuthRoute>
-                    <MessengerInbox />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
                 path="/appointments/new"
                 element={
                   <LazyAuthRoute requiredRole="agent">
                     <NewAppointment />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/messenger"
+                element={
+                  <LazyAuthRoute>
+                    <MessengerInbox />
                   </LazyAuthRoute>
                 }
               />
@@ -277,7 +276,7 @@ const App = () => (
                 path="/admin/settings"
                 element={
                   <LazyAuthRoute requiredRole="admin">
-                    <Dashboard />
+                    <Settings /> {/* Fixed: Changed from Dashboard to Settings */}
                   </LazyAuthRoute>
                 }
               />
