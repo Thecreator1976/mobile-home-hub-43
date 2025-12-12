@@ -1,90 +1,53 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Settings as SettingsIcon, Bell, Shield, Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Settings as SettingsIcon } from "lucide-react";
 
-const Settings = () => {
+export default function Settings() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground">
-            Manage your application settings and preferences.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+            <p className="text-muted-foreground">Manage your account and application settings</p>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <SettingsIcon className="h-5 w-5" />
-                General Settings
-              </CardTitle>
-              <CardDescription>
-                Configure general application preferences.
-              </CardDescription>
+              <CardTitle>General Settings</CardTitle>
+              <CardDescription>Application preferences and defaults</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                General settings configuration coming soon.
-              </p>
+              <p className="text-muted-foreground mb-4">Configure general application settings</p>
+              <Button>Configure</Button>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Notifications
-              </CardTitle>
-              <CardDescription>
-                Manage notification preferences.
-              </CardDescription>
+              <CardTitle>Team Settings</CardTitle>
+              <CardDescription>Manage team members and permissions</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Notification settings coming soon.
-              </p>
+              <p className="text-muted-foreground mb-4">Configure team settings</p>
+              <Button>Manage Team</Button>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="md:col-span-2">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Security
-              </CardTitle>
-              <CardDescription>
-                Security and access control settings.
-              </CardDescription>
+              <CardTitle>Advanced Settings</CardTitle>
+              <CardDescription>Advanced configuration options</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Security settings coming soon.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Database className="h-5 w-5" />
-                Data Management
-              </CardTitle>
-              <CardDescription>
-                Manage data export and backup options.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Data management options coming soon.
-              </p>
+              <p className="text-muted-foreground">Coming soon...</p>
             </CardContent>
           </Card>
         </div>
       </div>
     </DashboardLayout>
   );
-};
-
-export default Settings;
+}
