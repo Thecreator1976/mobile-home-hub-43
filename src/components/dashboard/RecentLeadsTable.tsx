@@ -1,13 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eye, MoreHorizontal } from "lucide-react";
+import { Eye, MoreHorizontal, MessageSquare, CalendarPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useSellerLeads } from "@/hooks/useSellerLeads";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
@@ -34,6 +34,7 @@ const statusVariants: Record<LeadStatus, "new" | "contacted" | "offer" | "contra
 
 export function RecentLeadsTable() {
   const { leads, isLoading } = useSellerLeads();
+  const navigate = useNavigate(); // Added for programmatic navigation
 
   const formatCurrency = (value: number | null | undefined) =>
     value
@@ -43,6 +44,18 @@ export function RecentLeadsTable() {
   // Get the 5 most recent leads
   const recentLeads = leads?.slice(0, 5) || [];
 
+  const handleAddNote = (leadId: string, leadName: string) => {
+    // Navigate to lead detail with note modal or implement modal logic
+    navigate(`/seller-leads/${leadId}#notes`);
+    // You could also open a modal here:
+    // openNoteModal(leadId, leadName);
+  };
+
+  const handleScheduleAppointment = (leadId: string, leadName: string) => {
+    // Navigate to calendar with pre-filled lead info
+    navigate(`/calendar/new?leadId=${leadId}&title=Appointment with ${encodeURIComponent(leadName)}`);
+  };
+
   if (isLoading) {
     return (
       <div className="rounded-xl bg-card shadow-card overflow-hidden animate-slide-up">
@@ -51,9 +64,11 @@ export function RecentLeadsTable() {
           <Skeleton className="h-4 w-32" />
         </div>
         <div className="p-6 space-y-4">
-          {Array(5).fill(0).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
+          {Array(5)
+            .fill(0)
+            .map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
         </div>
       </div>
     );
@@ -116,12 +131,8 @@ export function RecentLeadsTable() {
                       {statusLabels[lead.status as LeadStatus] || lead.status}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 text-right font-medium">
-                    {formatCurrency(lead.asking_price)}
-                  </td>
-                  <td className="px-6 py-4 text-right font-medium text-primary">
-                    {formatCurrency(lead.target_offer)}
-                  </td>
+                  <td className="px-6 py-4 text-right font-medium">{formatCurrency(lead.asking_price)}</td>
+                  <td className="px-6 py-4 text-right font-medium text-primary">{formatCurrency(lead.target_offer)}</td>
                   <td className="px-6 py-4 text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(lead.created_at), { addSuffix: true })}
                   </td>
@@ -140,10 +151,25 @@ export function RecentLeadsTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem asChild>
-                            <Link to={`/seller-leads/${lead.id}`}>View Details</Link>
+                            <Link to={`/seller-leads/${lead.id}`} className="cursor-pointer flex items-center">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Add Note</DropdownMenuItem>
-                          <DropdownMenuItem>Schedule Appointment</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleAddNote(lead.id, lead.name)}
+                            className="cursor-pointer flex items-center"
+                          >
+                            <MessageSquare className="mr-2 h-4 w-4" />
+                            Add Note
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleScheduleAppointment(lead.id, lead.name)}
+                            className="cursor-pointer flex items-center"
+                          >
+                            <CalendarPlus className="mr-2 h-4 w-4" />
+                            Schedule Appointment
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
