@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 interface AuthGuardProps {
@@ -10,79 +9,16 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
-  const { user, userRole, isLoading } = useAuth();
+  const { user, isLoading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [profileStatus, setProfileStatus] = useState<string | null>(null);
-  const [checkingProfile, setCheckingProfile] = useState(true);
-  const [roleChecked, setRoleChecked] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) {
-      // Redirect to login, preserving the intended destination
-      navigate("/login", { state: { from: location.pathname }, replace: true });
-      return;
+      navigate("/login", { replace: true });
     }
+  }, [user, isLoading, navigate]);
 
-    if (user) {
-      // Check email verification first
-      if (!user.email_confirmed_at) {
-        navigate("/verify-email", { replace: true });
-        setCheckingProfile(false);
-        return;
-      }
-
-      // Check profile status and payment
-      const checkProfile = async () => {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("status, is_paid")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!error && data) {
-          setProfileStatus(data.status);
-
-          // Redirect based on profile status
-          if (data.status === "pending") {
-            navigate("/pending-approval", { replace: true });
-            setCheckingProfile(false);
-            return;
-          }
-
-          // Check payment status for active users
-          if (data.status === "active" && !data.is_paid) {
-            navigate("/payment-required", { replace: true });
-            setCheckingProfile(false);
-            return;
-          }
-        }
-        setCheckingProfile(false);
-        setRoleChecked(true); // Profile check done, now check role
-      };
-
-      checkProfile();
-    }
-  }, [user, isLoading, navigate, location]);
-
-  // Separate useEffect for role checking - only run AFTER profile is verified
-  useEffect(() => {
-    if (!checkingProfile && !isLoading && user && requiredRole && roleChecked) {
-      const roleHierarchy = { admin: 3, agent: 2, viewer: 1 };
-      const userRoleLevel = roleHierarchy[userRole || "viewer"];
-      const requiredRoleLevel = roleHierarchy[requiredRole];
-
-      // Only redirect if user doesn't have required role
-      if (userRoleLevel < requiredRoleLevel) {
-        console.log(`Access denied. User role: ${userRole}, Required: ${requiredRole}`);
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-    }
-  }, [user, userRole, requiredRole, isLoading, navigate, checkingProfile, roleChecked]);
-
-  // Show loading state
-  if (isLoading || checkingProfile || !roleChecked) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -95,11 +31,6 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   if (!user) {
     return null;
-  }
-
-  // Check if profile is pending approval
-  if (profileStatus === "pending") {
-    return null; // Will be redirected by useEffect
   }
 
   return <>{children}</>;
