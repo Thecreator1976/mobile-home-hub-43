@@ -23,6 +23,12 @@ import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages (code splitting)
 const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Settings = lazy(() => import("./pages/Settings"));
+const CalendarPage = lazy(() => import("./pages/CalendarPage"));
+const NewAppointment = lazy(() => import("./pages/NewAppointment"));
+const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
+const MessengerInbox = lazy(() => import("./pages/MessengerInbox"));
+const Integrations = lazy(() => import("./pages/Integrations"));
 const SellerLeads = lazy(() => import("./pages/SellerLeads"));
 const SellerLeadDetail = lazy(() => import("./pages/SellerLeadDetail"));
 const NewSellerLead = lazy(() => import("./pages/NewSellerLead"));
@@ -31,21 +37,15 @@ const Buyers = lazy(() => import("./pages/Buyers"));
 const BuyerDetail = lazy(() => import("./pages/BuyerDetail"));
 const NewBuyer = lazy(() => import("./pages/NewBuyer"));
 const ImportBuyers = lazy(() => import("./pages/ImportBuyers"));
-const CalendarPage = lazy(() => import("./pages/CalendarPage"));
-const NewAppointment = lazy(() => import("./pages/NewAppointment"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 const NewPurchaseOrder = lazy(() => import("./pages/NewPurchaseOrder"));
 const PersonalAdvances = lazy(() => import("./pages/PersonalAdvances"));
 const ProfitLoss = lazy(() => import("./pages/ProfitLoss"));
-const ValueEstimator = lazy(() => import("./pages/ValueEstimator"));
 const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const ContractDetail = lazy(() => import("./pages/ContractDetail"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
-const MessengerInbox = lazy(() => import("./pages/MessengerInbox"));
-const Integrations = lazy(() => import("./pages/Integrations"));
-const Settings = lazy(() => import("./pages/Settings")); // Added Settings import
 
 // Wrapper for lazy loaded protected routes
 const LazyAuthRoute = ({
@@ -79,180 +79,14 @@ const App = () => (
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/payment-required" element={<PaymentRequired />} />
 
-              {/* Protected Routes with Lazy Loading */}
+              {/* CRITICAL FIX: Reorder routes - most specific first! */}
+
+              {/* Admin routes - MUST come before /dashboard */}
               <Route
-                path="/dashboard"
-                element={
-                  <LazyAuthRoute>
-                    <Dashboard />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/seller-leads"
-                element={
-                  <LazyAuthRoute>
-                    <SellerLeads />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/seller-leads/new"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <NewSellerLead />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/seller-leads/:id"
-                element={
-                  <LazyAuthRoute>
-                    <SellerLeadDetail />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/seller-leads/:id/make-offer"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <MakeOffer />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/buyers"
-                element={
-                  <LazyAuthRoute>
-                    <Buyers />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/buyers/:id"
-                element={
-                  <LazyAuthRoute>
-                    <BuyerDetail />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/buyers/new"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <NewBuyer />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/buyers/import"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <ImportBuyers />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/calendar"
-                element={
-                  <LazyAuthRoute>
-                    <CalendarPage />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/calendar/new"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <NewAppointment />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/appointments"
-                element={
-                  <LazyAuthRoute>
-                    <CalendarPage />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/appointments/new"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <NewAppointment />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/messenger"
-                element={
-                  <LazyAuthRoute>
-                    <MessengerInbox />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/expenses"
-                element={
-                  <LazyAuthRoute>
-                    <Expenses />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/purchase-orders"
-                element={
-                  <LazyAuthRoute>
-                    <PurchaseOrders />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/purchase-orders/new"
-                element={
-                  <LazyAuthRoute requiredRole="agent">
-                    <NewPurchaseOrder />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/personal-advances"
-                element={
-                  <LazyAuthRoute>
-                    <PersonalAdvances />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/value-estimator"
-                element={
-                  <LazyAuthRoute>
-                    <ValueEstimator />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/contracts"
-                element={
-                  <LazyAuthRoute>
-                    <Contracts />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/contracts/:id"
-                element={
-                  <LazyAuthRoute>
-                    <ContractDetail />
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
-                path="/profit-loss"
+                path="/admin/settings"
                 element={
                   <LazyAuthRoute requiredRole="admin">
-                    <ProfitLoss />
+                    <Settings />
                   </LazyAuthRoute>
                 }
               />
@@ -273,14 +107,6 @@ const App = () => (
                 }
               />
               <Route
-                path="/admin/settings"
-                element={
-                  <LazyAuthRoute requiredRole="admin">
-                    <Settings /> {/* Fixed: Changed from Dashboard to Settings */}
-                  </LazyAuthRoute>
-                }
-              />
-              <Route
                 path="/admin/integrations"
                 element={
                   <LazyAuthRoute requiredRole="admin">
@@ -289,7 +115,193 @@ const App = () => (
                 }
               />
 
-              {/* 404 */}
+              {/* Seller leads with IDs - specific before general */}
+              <Route
+                path="/seller-leads/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewSellerLead />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/seller-leads/:id/make-offer"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <MakeOffer />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/seller-leads/:id"
+                element={
+                  <LazyAuthRoute>
+                    <SellerLeadDetail />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/seller-leads"
+                element={
+                  <LazyAuthRoute>
+                    <SellerLeads />
+                  </LazyAuthRoute>
+                }
+              />
+
+              {/* Buyers with IDs - specific before general */}
+              <Route
+                path="/buyers/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewBuyer />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/buyers/import"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <ImportBuyers />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/buyers/:id"
+                element={
+                  <LazyAuthRoute>
+                    <BuyerDetail />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/buyers"
+                element={
+                  <LazyAuthRoute>
+                    <Buyers />
+                  </LazyAuthRoute>
+                }
+              />
+
+              {/* Calendar routes */}
+              <Route
+                path="/calendar/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewAppointment />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <LazyAuthRoute>
+                    <CalendarPage />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/appointments/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewAppointment />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/appointments"
+                element={
+                  <LazyAuthRoute>
+                    <CalendarPage />
+                  </LazyAuthRoute>
+                }
+              />
+
+              {/* Other specific routes */}
+              <Route
+                path="/messenger"
+                element={
+                  <LazyAuthRoute>
+                    <MessengerInbox />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/value-estimator"
+                element={
+                  <LazyAuthRoute>
+                    <ValueEstimator />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/purchase-orders/new"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <NewPurchaseOrder />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/purchase-orders"
+                element={
+                  <LazyAuthRoute>
+                    <PurchaseOrders />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/expenses"
+                element={
+                  <LazyAuthRoute>
+                    <Expenses />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/personal-advances"
+                element={
+                  <LazyAuthRoute>
+                    <PersonalAdvances />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/profit-loss"
+                element={
+                  <LazyAuthRoute requiredRole="admin">
+                    <ProfitLoss />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/contracts/:id"
+                element={
+                  <LazyAuthRoute>
+                    <ContractDetail />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/contracts"
+                element={
+                  <LazyAuthRoute>
+                    <Contracts />
+                  </LazyAuthRoute>
+                }
+              />
+
+              {/* Dashboard - MUST be near the end */}
+              <Route
+                path="/dashboard"
+                element={
+                  <LazyAuthRoute>
+                    <Dashboard />
+                  </LazyAuthRoute>
+                }
+              />
+
+              {/* 404 - MUST be last */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
