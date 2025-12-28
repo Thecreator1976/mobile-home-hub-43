@@ -3,6 +3,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
+// Helper to get user's organization_id
+const getUserOrganizationId = async (userId: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+  return data?.organization_id || null;
+};
+
 export interface ContractTemplate {
   id: string;
   name: string;
@@ -41,11 +51,17 @@ export function useContractTemplates() {
 
   const createTemplate = useMutation({
     mutationFn: async (input: CreateTemplateInput) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const organizationId = await getUserOrganizationId(user.id);
+      if (!organizationId) throw new Error('User organization not found');
+
       const { data, error } = await supabase
         .from('contract_templates')
         .insert({
           ...input,
-          created_by: user?.id,
+          created_by: user.id,
+          organization_id: organizationId,
         })
         .select()
         .single();
