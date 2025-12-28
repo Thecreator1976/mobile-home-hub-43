@@ -90,11 +90,14 @@ export function FileUpload({
       setProgress(100);
       setStatus("success");
 
-      const { data: urlData } = supabase.storage
+      // Use signed URL for private buckets instead of public URL
+      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
         .from(bucket)
-        .getPublicUrl(data.path);
+        .createSignedUrl(data.path, 3600); // 1 hour expiry
 
-      onUploadComplete?.(urlData.publicUrl, data.path);
+      if (signedUrlError) throw signedUrlError;
+
+      onUploadComplete?.(signedUrlData.signedUrl, data.path);
 
       toast({
         title: "Upload Complete",
