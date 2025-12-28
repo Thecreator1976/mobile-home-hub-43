@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -15,14 +16,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, User, DollarSign, Home, MapPin, Info } from "lucide-react";
+import { ArrowLeft, Save, User, DollarSign, Home, MapPin, Info, CalendarDays, Clock, ExternalLink, CheckCircle, XCircle, Phone, User2 } from "lucide-react";
 import { useSellerLead, useSellerLeads, HomeType, LeadStatus } from "@/hooks/useSellerLeads";
+import { useAppointments, AppointmentType } from "@/hooks/useAppointments";
+import { useBuyers } from "@/hooks/useBuyers";
+import { format, parseISO } from "date-fns";
 
 export default function EditSellerLead() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: lead, isLoading } = useSellerLead(id);
   const { updateLead } = useSellerLeads();
+  const { appointments } = useAppointments();
+  const { buyers } = useBuyers();
+
+  // Filter appointments for this lead
+  const leadAppointments = appointments.filter(a => a.seller_lead_id === id);
+
+  // Helper to get buyer info
+  const getBuyerInfo = (buyerId: string | null) => {
+    if (!buyerId) return null;
+    return buyers.find(b => b.id === buyerId);
+  };
+
+  // Type labels for display
+  const typeLabels: Record<AppointmentType, string> = {
+    call: "Call",
+    meeting: "Meeting",
+    property_viewing: "Property Viewing",
+    closing: "Closing",
+  };
 
   const [formData, setFormData] = useState({
     name: "",
@@ -458,6 +481,87 @@ export default function EditSellerLead() {
                 <SelectItem value="lost">Lost</SelectItem>
               </SelectContent>
             </Select>
+          </CardContent>
+        </Card>
+
+        {/* Property Appointments */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-primary" />
+              Property Appointments
+            </CardTitle>
+            <CardDescription>
+              Appointments scheduled for this property ({leadAppointments.length})
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {leadAppointments.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>No appointments scheduled</p>
+                <Button asChild variant="link" size="sm" className="mt-2">
+                  <Link to={`/calendar/new?leadId=${id}`}>
+                    Schedule an appointment
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {leadAppointments.map((apt) => {
+                  const buyer = getBuyerInfo(apt.buyer_id);
+                  return (
+                    <Link
+                      key={apt.id}
+                      to="/calendar?tab=list"
+                      className="block p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{apt.title}</span>
+                            <Badge variant="outline">{typeLabels[apt.type as AppointmentType] || apt.type}</Badge>
+                            {apt.status === "completed" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                            {apt.status === "cancelled" && <XCircle className="h-4 w-4 text-destructive" />}
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {format(parseISO(apt.start_time), "MMM d, yyyy 'at' h:mm a")}
+                            </span>
+                            {apt.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {apt.location}
+                              </span>
+                            )}
+                          </div>
+                          {buyer && (
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <User2 className="h-3 w-3" />
+                                {buyer.name}
+                              </span>
+                              {buyer.phone && (
+                                <a
+                                  href={`tel:${buyer.phone}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="flex items-center gap-1 hover:text-primary"
+                                >
+                                  <Phone className="h-3 w-3" />
+                                  {buyer.phone}
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
