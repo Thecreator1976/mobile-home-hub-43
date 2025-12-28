@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.facebook-send-message]
 verify_jwt = true
+
+[functions.send-invitation]
+verify_jwt = true

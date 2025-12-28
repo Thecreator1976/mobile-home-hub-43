@@ -160,10 +160,10 @@ export default function Login() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Sign up
-              </Link>
+              Need access?{" "}
+              <span className="text-foreground font-medium">
+                Contact your administrator for an invitation.
+              </span>
             </p>
           </CardFooter>
         </Card>

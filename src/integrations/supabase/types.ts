@@ -408,6 +408,53 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          organization_id: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          organization_id?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_timeline: {
         Row: {
           action: string
@@ -986,6 +1033,10 @@ export type Database = {
     }
     Functions: {
       can_access_org: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
+      can_invite_to_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
