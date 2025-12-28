@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -14,12 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, User, DollarSign, Home, MapPin } from "lucide-react";
-import { useSellerLeads, HomeType } from "@/hooks/useSellerLeads";
+import { ArrowLeft, Save, User, DollarSign, Home, MapPin, Info } from "lucide-react";
+import { useSellerLead, useSellerLeads, HomeType, LeadStatus } from "@/hooks/useSellerLeads";
 
-export default function NewSellerLead() {
+export default function EditSellerLead() {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { createLead } = useSellerLeads();
+  const { data: lead, isLoading } = useSellerLead(id);
+  const { updateLead } = useSellerLeads();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -41,7 +44,35 @@ export default function NewSellerLead() {
     condition: "",
     parkOwned: true,
     notes: "",
+    status: "new" as LeadStatus,
   });
+
+  useEffect(() => {
+    if (lead) {
+      setFormData({
+        name: lead.name || "",
+        phone: lead.phone || "",
+        email: lead.email || "",
+        address: lead.address || "",
+        city: lead.city || "",
+        state: lead.state || "",
+        zip: lead.zip || "",
+        askingPrice: lead.asking_price?.toString() || "",
+        targetOffer: lead.target_offer?.toString() || "",
+        estimatedValue: lead.estimated_value?.toString() || "",
+        owedAmount: lead.owed_amount?.toString() || "",
+        lotRent: lead.lot_rent?.toString() || "",
+        homeType: lead.home_type || "single",
+        yearBuilt: lead.year_built?.toString() || "",
+        widthFt: lead.width_ft?.toString() || "",
+        lengthFt: lead.length_ft?.toString() || "",
+        condition: lead.condition?.toString() || "",
+        parkOwned: lead.park_owned ?? true,
+        notes: lead.notes || "",
+        status: lead.status || "new",
+      });
+    }
+  }, [lead]);
 
   const handleChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -49,36 +80,66 @@ export default function NewSellerLead() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!id) return;
 
-    createLead.mutate(
+    updateLead.mutate(
       {
+        id,
         name: formData.name,
-        phone: formData.phone || undefined,
-        email: formData.email || undefined,
+        phone: formData.phone || null,
+        email: formData.email || null,
         address: formData.address,
-        city: formData.city || undefined,
-        state: formData.state || undefined,
-        zip: formData.zip || undefined,
+        city: formData.city || null,
+        state: formData.state || null,
+        zip: formData.zip || null,
         asking_price: parseInt(formData.askingPrice) || 0,
-        target_offer: formData.targetOffer ? parseInt(formData.targetOffer) : undefined,
-        estimated_value: formData.estimatedValue ? parseInt(formData.estimatedValue) : undefined,
-        owed_amount: formData.owedAmount ? parseInt(formData.owedAmount) : undefined,
-        lot_rent: formData.lotRent ? parseInt(formData.lotRent) : undefined,
+        target_offer: formData.targetOffer ? parseInt(formData.targetOffer) : null,
+        estimated_value: formData.estimatedValue ? parseInt(formData.estimatedValue) : null,
+        owed_amount: formData.owedAmount ? parseInt(formData.owedAmount) : null,
+        lot_rent: formData.lotRent ? parseInt(formData.lotRent) : null,
         home_type: formData.homeType,
-        year_built: formData.yearBuilt ? parseInt(formData.yearBuilt) : undefined,
-        width_ft: formData.widthFt ? parseInt(formData.widthFt) : undefined,
-        length_ft: formData.lengthFt ? parseInt(formData.lengthFt) : undefined,
-        condition: formData.condition ? parseInt(formData.condition) : undefined,
+        year_built: formData.yearBuilt ? parseInt(formData.yearBuilt) : null,
+        width_ft: formData.widthFt ? parseInt(formData.widthFt) : null,
+        length_ft: formData.lengthFt ? parseInt(formData.lengthFt) : null,
+        condition: formData.condition ? parseInt(formData.condition) : null,
         park_owned: formData.parkOwned,
-        notes: formData.notes || undefined,
+        notes: formData.notes || null,
+        status: formData.status,
       },
       {
-        onSuccess: (data) => {
-          navigate(`/seller-leads/${data.id}`);
+        onSuccess: () => {
+          navigate(`/seller-leads/${id}`);
         },
       }
     );
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-64" />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Skeleton className="h-64" />
+            <Skeleton className="h-64" />
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!lead) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">Lead not found</p>
+          <Button asChild>
+            <Link to="/seller-leads">Back to Seller Leads</Link>
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -86,17 +147,17 @@ export default function NewSellerLead() {
         {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" type="button" asChild>
-            <Link to="/seller-leads">
+            <Link to={`/seller-leads/${id}`}>
               <ArrowLeft className="h-5 w-5" />
             </Link>
           </Button>
           <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">New Seller Lead</h1>
-            <p className="text-muted-foreground">Add a new lead to your pipeline</p>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Lead</h1>
+            <p className="text-muted-foreground">Update seller lead information</p>
           </div>
-          <Button type="submit" disabled={createLead.isPending || !formData.name.trim() || !formData.address.trim()}>
+          <Button type="submit" disabled={updateLead.isPending || !formData.name.trim() || !formData.address.trim()}>
             <Save className="h-4 w-4 mr-2" />
-            {createLead.isPending ? "Creating..." : "Create Lead"}
+            {updateLead.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
 
@@ -375,6 +436,31 @@ export default function NewSellerLead() {
           </Card>
         </div>
 
+        {/* Status */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              Lead Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={formData.status} onValueChange={(v) => handleChange("status", v as LeadStatus)}>
+              <SelectTrigger className="w-full max-w-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="contacted">Contacted</SelectItem>
+                <SelectItem value="offer_made">Offer Made</SelectItem>
+                <SelectItem value="under_contract">Under Contract</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+                <SelectItem value="lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+
         {/* Notes */}
         <Card>
           <CardHeader>
@@ -394,11 +480,11 @@ export default function NewSellerLead() {
         {/* Submit Buttons */}
         <div className="flex justify-end gap-4">
           <Button variant="outline" type="button" asChild>
-            <Link to="/seller-leads">Cancel</Link>
+            <Link to={`/seller-leads/${id}`}>Cancel</Link>
           </Button>
-          <Button type="submit" disabled={createLead.isPending || !formData.name.trim() || !formData.address.trim()}>
+          <Button type="submit" disabled={updateLead.isPending || !formData.name.trim() || !formData.address.trim()}>
             <Save className="h-4 w-4 mr-2" />
-            {createLead.isPending ? "Creating..." : "Create Lead"}
+            {updateLead.isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
       </form>
