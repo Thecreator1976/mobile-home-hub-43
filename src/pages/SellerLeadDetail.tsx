@@ -28,6 +28,8 @@ import {
   File,
   TrendingUp,
   Calculator,
+  Briefcase,
+  CalendarClock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSellerLead, useSellerLeads, LeadStatus } from "@/hooks/useSellerLeads";
@@ -36,6 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PostToSocialButton } from "@/components/integrations/PostToSocialButton";
 import { CallWithOpenPhoneButton } from "@/components/integrations/CallWithOpenPhoneButton";
 import { SMSWithOpenPhoneButton } from "@/components/integrations/SMSWithOpenPhoneButton";
+import { useAppointments } from "@/hooks/useAppointments";
+import { PropertyAppointmentHistory } from "@/components/appointments/PropertyAppointmentHistory";
 
 const statusConfig: Record<LeadStatus, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-800" },
@@ -55,6 +59,10 @@ export default function SellerLeadDetail() {
   const { updateLead } = useSellerLeads();
   const [newNote, setNewNote] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const { appointments } = useAppointments();
+  
+  // Filter appointments for this lead
+  const leadAppointments = appointments.filter(apt => apt.seller_lead_id === id);
 
   // Fetch timeline
   const { data: timeline = [] } = useQuery({
@@ -205,6 +213,14 @@ export default function SellerLeadDetail() {
                 Make Offer
               </Link>
             </Button>
+            {lead.status === "under_contract" && (
+              <Button variant="default" className="bg-green-600 hover:bg-green-700" asChild>
+                <Link to={`/contracts/new?leadId=${lead.id}`}>
+                  <Briefcase className="h-4 w-4 mr-2" />
+                  Start Paperwork
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -253,6 +269,10 @@ export default function SellerLeadDetail() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="property">Property</TabsTrigger>
             <TabsTrigger value="financials">Financials</TabsTrigger>
+            <TabsTrigger value="appointments">
+              <CalendarClock className="h-4 w-4 mr-1" />
+              Appointments ({leadAppointments.length})
+            </TabsTrigger>
             <TabsTrigger value="expenses">Expenses</TabsTrigger>
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -450,6 +470,15 @@ export default function SellerLeadDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Appointments Tab */}
+          <TabsContent value="appointments">
+            <PropertyAppointmentHistory 
+              appointments={leadAppointments} 
+              leadId={lead.id} 
+              leadName={lead.name}
+            />
           </TabsContent>
 
           {/* Expenses Tab */}
