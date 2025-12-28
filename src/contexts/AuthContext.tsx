@@ -2,12 +2,21 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-type AppRole = "admin" | "agent" | "viewer";
+type AppRole = "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin";
+
+interface UserOrganization {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: AppRole | null;
+  userOrganization: UserOrganization | null;
+  isSuperAdmin: boolean;
+  isTenantAdmin: boolean;
   isLoading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
@@ -20,7 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [userOrganization, setUserOrganization] = useState<UserOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const isSuperAdmin = userRole === "super_admin";
+  const isTenantAdmin = userRole === "tenant_admin";
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -30,13 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
 
-        // Defer role fetch to avoid deadlock
+        // Defer role and org fetch to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
-            fetchUserRole(session.user.id);
+            fetchUserRoleAndOrg(session.user.id);
           }, 0);
         } else {
           setUserRole(null);
+          setUserOrganization(null);
         }
       }
     );
@@ -46,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        fetchUserRoleAndOrg(session.user.id);
       }
       setIsLoading(false);
     });
@@ -54,23 +68,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRoleAndOrg = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Fetch role
+      const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .single();
 
-      if (error) {
-        console.error("Error fetching user role:", error);
-        setUserRole("viewer"); // Default role
+      if (roleError) {
+        console.error("Error fetching user role:", roleError);
+        setUserRole("viewer");
       } else {
-        setUserRole(data?.role as AppRole);
+        setUserRole(roleData?.role as AppRole);
+      }
+
+      // Fetch organization via profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("user_id", userId)
+        .single();
+
+      if (profileError || !profileData?.organization_id) {
+        setUserOrganization(null);
+      } else {
+        // Fetch organization details
+        const { data: orgData, error: orgError } = await supabase
+          .from("organizations")
+          .select("id, name, slug")
+          .eq("id", profileData.organization_id)
+          .single();
+
+        if (orgError || !orgData) {
+          setUserOrganization(null);
+        } else {
+          setUserOrganization({
+            id: orgData.id,
+            name: orgData.name,
+            slug: orgData.slug,
+          });
+        }
       }
     } catch (error) {
-      console.error("Error fetching user role:", error);
+      console.error("Error fetching user role/org:", error);
       setUserRole("viewer");
+      setUserOrganization(null);
     }
   };
 
@@ -105,6 +149,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setUserRole(null);
+    setUserOrganization(null);
   };
 
   return (
@@ -113,6 +158,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         userRole,
+        userOrganization,
+        isSuperAdmin,
+        isTenantAdmin,
         isLoading,
         signUp,
         signIn,

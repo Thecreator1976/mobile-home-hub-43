@@ -19,12 +19,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, Shield, Loader2, DollarSign } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Loader2, DollarSign, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { StatCardSkeleton } from "@/components/ui/loading";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+}
 
 interface UserWithRole {
   id: string;
@@ -36,10 +43,14 @@ interface UserWithRole {
   role: string;
   is_paid: boolean;
   subscription_tier: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
 }
 
 export default function AdminUsers() {
+  const { isSuperAdmin, userOrganization } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -47,19 +58,51 @@ export default function AdminUsers() {
   const [newRole, setNewRole] = useState<string>("");
   const [newStatus, setNewStatus] = useState<string>("");
   const [newIsPaid, setNewIsPaid] = useState<boolean>(false);
+  const [newOrganizationId, setNewOrganizationId] = useState<string>("");
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+    if (isSuperAdmin) {
+      fetchOrganizations();
+    }
+  }, [isSuperAdmin]);
+
+  const fetchOrganizations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("organizations")
+        .select("id, name, slug")
+        .order("name");
+      
+      if (error) throw error;
+      setOrganizations(data || []);
+    } catch (error) {
+      console.error("Error fetching organizations:", error);
+    }
+  };
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Fetch profiles with their roles
-      const { data: profiles, error: profilesError } = await supabase
+      // Fetch profiles with organization info
+      let profilesQuery = supabase
         .from("profiles")
-        .select("*")
+        .select(`
+          *,
+          organizations:organization_id (
+            id,
+            name,
+            slug
+          )
+        `)
         .order("created_at", { ascending: false });
+
+      // If not super_admin, filter by user's organization
+      if (!isSuperAdmin && userOrganization) {
+        profilesQuery = profilesQuery.eq("organization_id", userOrganization.id);
+      }
+
+      const { data: profiles, error: profilesError } = await profilesQuery;
 
       if (profilesError) throw profilesError;
 
@@ -69,8 +112,8 @@ export default function AdminUsers() {
 
       if (rolesError) throw rolesError;
 
-      // Combine profiles with roles
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
+      // Combine profiles with roles and org info
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile: any) => {
         const userRole = roles?.find((r) => r.user_id === profile.user_id);
         return {
           id: profile.id,
@@ -82,6 +125,8 @@ export default function AdminUsers() {
           role: userRole?.role || "viewer",
           is_paid: profile.is_paid ?? false,
           subscription_tier: profile.subscription_tier,
+          organization_id: profile.organization_id,
+          organization_name: profile.organizations?.name || null,
         };
       });
 
@@ -102,6 +147,7 @@ export default function AdminUsers() {
     setNewRole(user.role);
     setNewStatus(user.status || "pending");
     setNewIsPaid(user.is_paid);
+    setNewOrganizationId(user.organization_id || "");
     setDialogOpen(true);
   };
 
@@ -110,8 +156,14 @@ export default function AdminUsers() {
 
     setUpdating(true);
     try {
-      // Update profile status and payment
-      const updateData: { status: string; is_paid: boolean; subscription_tier?: string; subscription_expires_at?: string | null } = {
+      // Update profile status, payment, and organization
+      const updateData: { 
+        status: string; 
+        is_paid: boolean; 
+        subscription_tier?: string; 
+        subscription_expires_at?: string | null;
+        organization_id?: string | null;
+      } = {
         status: newStatus,
         is_paid: newIsPaid,
       };
@@ -124,6 +176,11 @@ export default function AdminUsers() {
         updateData.subscription_tier = 'free';
         updateData.subscription_expires_at = null;
       }
+
+      // Only super_admin can change organization
+      if (isSuperAdmin) {
+        updateData.organization_id = newOrganizationId || null;
+      }
       
       const { error: profileError } = await supabase
         .from("profiles")
@@ -132,10 +189,10 @@ export default function AdminUsers() {
 
       if (profileError) throw profileError;
 
-      // Update user role
+      // Update user role - super_admin can set any role, tenant_admin can only set admin/agent/viewer
       const { error: roleError } = await supabase
         .from("user_roles")
-        .update({ role: newRole as "admin" | "agent" | "viewer" })
+        .update({ role: newRole as "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin" })
         .eq("user_id", selectedUser.user_id);
 
       if (roleError) throw roleError;
@@ -174,16 +231,37 @@ export default function AdminUsers() {
       key: "role",
       header: "Role",
       sortable: true,
-      render: (user) => (
-        <Badge
-          variant={
-            user.role === "admin" ? "default" : user.role === "agent" ? "secondary" : "outline"
-          }
-        >
-          {user.role}
-        </Badge>
-      ),
+      render: (user) => {
+        const roleColors: Record<string, string> = {
+          super_admin: "bg-primary text-primary-foreground",
+          tenant_admin: "bg-secondary text-secondary-foreground",
+          admin: "default",
+          agent: "secondary",
+          viewer: "outline",
+        };
+        return (
+          <Badge
+            variant={user.role === "admin" ? "default" : user.role === "agent" ? "secondary" : "outline"}
+            className={user.role === "super_admin" ? "bg-primary text-primary-foreground" : user.role === "tenant_admin" ? "bg-accent text-accent-foreground" : ""}
+          >
+            {user.role === "super_admin" ? "Super Admin" : 
+             user.role === "tenant_admin" ? "Tenant Admin" : 
+             user.role}
+          </Badge>
+        );
+      },
     },
+    ...(isSuperAdmin ? [{
+      key: "organization_name" as keyof UserWithRole,
+      header: "Organization",
+      sortable: true,
+      render: (user: UserWithRole) => (
+        <div className="flex items-center gap-2">
+          <Building className="h-4 w-4 text-muted-foreground" />
+          <span>{user.organization_name || "No Organization"}</span>
+        </div>
+      ),
+    }] : []),
     {
       key: "status",
       header: "Status",
@@ -347,13 +425,42 @@ export default function AdminUsers() {
                     <SelectItem value="viewer">Viewer</SelectItem>
                     <SelectItem value="agent">Agent</SelectItem>
                     <SelectItem value="admin">Admin</SelectItem>
+                    {isSuperAdmin && (
+                      <>
+                        <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                        <SelectItem value="super_admin">Super Admin</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Admins can manage users and access all features. Agents can manage leads and
-                  buyers. Viewers have read-only access.
+                  {isSuperAdmin 
+                    ? "Super Admin: Full platform access. Tenant Admin: Manages their organization. Admin/Agent/Viewer: Standard CRM roles."
+                    : "Admins can manage users and access all features. Agents can manage leads and buyers. Viewers have read-only access."}
                 </p>
               </div>
+
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Organization</label>
+                  <Select value={newOrganizationId} onValueChange={setNewOrganizationId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select organization..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">No Organization</SelectItem>
+                      {organizations.map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Assign user to an organization to limit their data access.
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Status</label>

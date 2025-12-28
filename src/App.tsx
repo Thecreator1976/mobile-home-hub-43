@@ -48,8 +48,7 @@ const ContractTemplates = lazy(() => import("./pages/ContractTemplates"));
 const Contracts = lazy(() => import("./pages/Contracts"));
 const ContractDetail = lazy(() => import("./pages/ContractDetail"));
 const AdminUsers = lazy(() => import("./pages/AdminUsers"));
-
-// Wrapper for lazy loaded protected routes
+const AdminOrganizations = lazy(() => import("./pages/AdminOrganizations"));
 const LazyAuthRoute = ({
   children,
   requiredRole,
@@ -113,6 +112,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute requiredRole="admin">
                     <Integrations />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/admin/organizations"
+                element={
+                  <LazyAuthRoute requiredRole="admin">
+                    <AdminOrganizations />
                   </LazyAuthRoute>
                 }
               />

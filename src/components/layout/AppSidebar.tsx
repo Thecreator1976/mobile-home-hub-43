@@ -33,6 +33,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   adminOnly?: boolean;
+  superAdminOnly?: boolean;
   exact?: boolean;
 }
 
@@ -58,6 +59,7 @@ const toolsNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { title: "User Management", href: "/admin/users", icon: UserCog, adminOnly: true },
+  { title: "Organizations", href: "/admin/organizations", icon: Shield, superAdminOnly: true },
   { title: "Profit & Loss", href: "/profit-loss", icon: BarChart3, adminOnly: true },
   { title: "Contract Templates", href: "/admin/contract-templates", icon: FileText, adminOnly: true },
   { title: "Integrations", href: "/admin/integrations", icon: Zap, adminOnly: true },
@@ -73,11 +75,19 @@ interface AppSidebarProps {
 
 export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen }: AppSidebarProps) {
   const location = useLocation();
-  const { userRole } = useAuth();
-  const isAdmin = userRole === "admin";
+  const { userRole, isSuperAdmin, isTenantAdmin } = useAuth();
+  
+  // Admin access: super_admin, tenant_admin, or admin
+  const hasAdminAccess = isSuperAdmin || isTenantAdmin || userRole === "admin";
 
   const NavSection = ({ title, items }: { title: string; items: NavItem[] }) => {
-    const filteredItems = items.filter((item) => !item.adminOnly || isAdmin);
+    const filteredItems = items.filter((item) => {
+      // Super admin only items
+      if (item.superAdminOnly && !isSuperAdmin) return false;
+      // Admin only items - accessible by super_admin, tenant_admin, or admin
+      if (item.adminOnly && !hasAdminAccess) return false;
+      return true;
+    });
     if (filteredItems.length === 0) return null;
 
     return (
@@ -154,7 +164,7 @@ export function AppSidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen 
           <NavSection title="Main" items={mainNavItems} />
           <NavSection title="Finance" items={financeNavItems} />
           <NavSection title="Tools" items={toolsNavItems} />
-          {isAdmin && <NavSection title="Admin" items={adminNavItems} />}
+          {hasAdminAccess && <NavSection title="Admin" items={adminNavItems} />}
         </nav>
       </ScrollArea>
 
