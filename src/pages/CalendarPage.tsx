@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar as CalendarIcon, List, Plus, Clock, CheckCircle, XCircle, CalendarDays } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAppointments, Appointment } from "@/hooks/useAppointments";
 import { AppointmentCalendar } from "@/components/appointments/AppointmentCalendar";
 import { AppointmentList } from "@/components/appointments/AppointmentList";
@@ -13,6 +13,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isToday, isTomorrow, startOfToday, isAfter } from "date-fns";
 
 export default function CalendarPage() {
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get("tab") || "calendar";
   const { appointments, isLoading } = useAppointments();
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
@@ -102,7 +104,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Calendar/List Tabs */}
-        <Tabs defaultValue="calendar" className="space-y-4">
+        <Tabs defaultValue={defaultTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="calendar" className="flex items-center gap-2">
               <CalendarIcon className="h-4 w-4" />
