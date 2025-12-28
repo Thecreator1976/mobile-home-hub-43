@@ -155,7 +155,7 @@ export default function AdminUsers() {
     setNewRole(user.role);
     setNewStatus(user.status || "pending");
     setNewIsPaid(user.is_paid);
-    setNewOrganizationId(user.organization_id || "");
+    setNewOrganizationId(user.organization_id || "none");
     setDialogOpen(true);
   };
 
@@ -187,7 +187,7 @@ export default function AdminUsers() {
 
       // Only super_admin can change organization
       if (isSuperAdmin) {
-        updateData.organization_id = newOrganizationId || null;
+        updateData.organization_id = newOrganizationId === "none" ? null : (newOrganizationId || null);
       }
       
       const { error: profileError } = await supabase
@@ -358,10 +358,12 @@ export default function AdminUsers() {
             <h1 className="text-2xl lg:text-3xl font-bold">User Management</h1>
             <p className="text-muted-foreground">Manage user roles and approval status</p>
           </div>
-          <Button variant="gradient" onClick={handleOpenInviteDialog}>
-            <Mail className="h-4 w-4 mr-2" />
-            Invite User
-          </Button>
+          {!isSuperAdmin && (
+            <Button variant="gradient" onClick={handleOpenInviteDialog}>
+              <Mail className="h-4 w-4 mr-2" />
+              Invite User
+            </Button>
+          )}
         </div>
 
         {/* Stats */}
@@ -488,7 +490,7 @@ export default function AdminUsers() {
                       <SelectValue placeholder="Select organization..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No Organization</SelectItem>
+                      <SelectItem value="none">No Organization</SelectItem>
                       {organizations.map((org) => (
                         <SelectItem key={org.id} value={org.id}>
                           {org.name}
@@ -584,12 +586,6 @@ export default function AdminUsers() {
                   <SelectContent>
                     <SelectItem value="viewer">Viewer</SelectItem>
                     <SelectItem value="agent">Agent</SelectItem>
-                    {isSuperAdmin && (
-                      <>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
-                      </>
-                    )}
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
