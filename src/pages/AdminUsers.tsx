@@ -18,14 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, UserX, Shield, Loader2, DollarSign, Building } from "lucide-react";
+import { Users, UserCheck, UserX, Shield, Loader2, DollarSign, Building, Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { StatCardSkeleton } from "@/components/ui/loading";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
+import { useInvitations } from "@/hooks/useInvitations";
 
 interface Organization {
   id: string;
@@ -59,6 +61,12 @@ export default function AdminUsers() {
   const [newStatus, setNewStatus] = useState<string>("");
   const [newIsPaid, setNewIsPaid] = useState<boolean>(false);
   const [newOrganizationId, setNewOrganizationId] = useState<string>("");
+
+  // Invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<string>("agent");
+  const { sendInvitation, sending: sendingInvite } = useInvitations();
 
   useEffect(() => {
     fetchUsers();
@@ -215,6 +223,32 @@ export default function AdminUsers() {
     }
   };
 
+  const handleOpenInviteDialog = () => {
+    setInviteEmail("");
+    setInviteRole("agent");
+    setInviteDialogOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim()) return;
+
+    // For tenant admins, use their organization
+    const orgId = isSuperAdmin ? null : userOrganization?.id || null;
+    const orgName = isSuperAdmin ? "MobileHome CRM" : userOrganization?.name || "MobileHome CRM";
+
+    const result = await sendInvitation({
+      email: inviteEmail.trim(),
+      organization_id: orgId,
+      organization_name: orgName,
+      role: inviteRole,
+    });
+
+    if (result.success) {
+      setInviteDialogOpen(false);
+      setInviteEmail("");
+    }
+  };
+
   const columns: Column<UserWithRole>[] = [
     {
       key: "full_name",
@@ -319,9 +353,15 @@ export default function AdminUsers() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Manage user roles and approval status</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">User Management</h1>
+            <p className="text-muted-foreground">Manage user roles and approval status</p>
+          </div>
+          <Button variant="gradient" onClick={handleOpenInviteDialog}>
+            <Mail className="h-4 w-4 mr-2" />
+            Invite User
+          </Button>
         </div>
 
         {/* Stats */}
@@ -508,6 +548,78 @@ export default function AdminUsers() {
                   </>
                 ) : (
                   "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Invite User Dialog */}
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite New User</DialogTitle>
+              <DialogDescription>
+                Send an invitation to join {isSuperAdmin ? "MobileHome CRM" : userOrganization?.name || "your organization"}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email Address</label>
+                <Input
+                  type="email"
+                  placeholder="user@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Role</label>
+                <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="agent">Agent</SelectItem>
+                    {isSuperAdmin && (
+                      <>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="tenant_admin">Tenant Admin</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {inviteRole === "agent" && "Agents can manage leads and buyers."}
+                  {inviteRole === "viewer" && "Viewers have read-only access."}
+                  {inviteRole === "admin" && "Admins can manage users and access all features."}
+                  {inviteRole === "tenant_admin" && "Tenant Admins manage their organization."}
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="gradient" 
+                onClick={handleSendInvite} 
+                disabled={sendingInvite || !inviteEmail.trim()}
+              >
+                {sendingInvite ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Invitation
+                  </>
                 )}
               </Button>
             </DialogFooter>

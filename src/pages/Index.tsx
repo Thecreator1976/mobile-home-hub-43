@@ -18,12 +18,6 @@ export default function Index() {
             <Button variant="ghost" asChild>
               <Link to="/login">Sign In</Link>
             </Button>
-            <Button variant="gradient" asChild>
-              <Link to="/dashboard">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
           </div>
         </div>
       </header>
@@ -44,15 +38,15 @@ export default function Index() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button variant="gradient" size="xl" asChild>
-              <Link to="/dashboard">
-                Start Free Trial
+              <Link to="/login">
+                Sign In
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
-            <Button variant="outline" size="xl" asChild>
-              <Link to="/login">Watch Demo</Link>
-            </Button>
           </div>
+          <p className="text-sm text-muted-foreground mt-4">
+            Access is by invitation only. Contact your administrator for an invite.
+          </p>
         </div>
       </section>
 
@@ -130,12 +124,15 @@ export default function Index() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-muted-foreground mb-8">
-            Join hundreds of mobile home investors who are already using MobileHome CRM to close more deals.
+          <p className="text-muted-foreground mb-4">
+            MobileHome CRM helps mobile home investors close more deals with powerful tools and insights.
+          </p>
+          <p className="text-sm text-muted-foreground mb-8">
+            Contact your organization administrator for an invitation to join.
           </p>
           <Button variant="gradient" size="xl" asChild>
-            <Link to="/dashboard">
-              Get Started for Free
+            <Link to="/login">
+              Sign In
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>

@@ -45,7 +45,8 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Building, Users, Plus, Loader2, MoreHorizontal, Play, Pause, Trash2, UserCog, Check, Ban, UserMinus } from "lucide-react";
+import { Building, Users, Plus, Loader2, MoreHorizontal, Play, Pause, Trash2, UserCog, Check, Ban, UserMinus, Mail } from "lucide-react";
+import { useInvitations } from "@/hooks/useInvitations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -91,6 +92,13 @@ export default function AdminOrganizations() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteOrgId, setInviteOrgId] = useState<string | null>(null);
+  const [inviteOrgName, setInviteOrgName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const { sendInvitation, sending: sendingInvite } = useInvitations();
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -406,6 +414,29 @@ export default function AdminOrganizations() {
     }
   };
 
+  const handleInviteTenantAdmin = (org: Organization) => {
+    setInviteOrgId(org.id);
+    setInviteOrgName(org.name);
+    setInviteEmail("");
+    setInviteDialogOpen(true);
+  };
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim() || !inviteOrgId) return;
+    
+    const result = await sendInvitation({
+      email: inviteEmail.trim(),
+      organization_id: inviteOrgId,
+      organization_name: inviteOrgName,
+      role: "tenant_admin",
+    });
+
+    if (result.success) {
+      setInviteDialogOpen(false);
+      setInviteEmail("");
+    }
+  };
+
   const columns: Column<Organization>[] = [
     {
       key: "name",
@@ -466,6 +497,10 @@ export default function AdminOrganizations() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleInviteTenantAdmin(org)}>
+              <Mail className="h-4 w-4 mr-2" />
+              Invite Tenant Admin
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleManageUsers(org)}>
               <UserCog className="h-4 w-4 mr-2" />
               Manage Users
@@ -782,6 +817,57 @@ export default function AdminOrganizations() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Invite Tenant Admin Dialog */}
+        <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Invite Tenant Admin</DialogTitle>
+              <DialogDescription>
+                Send an invitation to join <strong>{inviteOrgName}</strong> as a Tenant Admin.
+                They will manage users and settings for this organization.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Email Address</label>
+                <Input
+                  type="email"
+                  placeholder="admin@example.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  An invitation email will be sent to this address.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setInviteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="gradient" 
+                onClick={handleSendInvite} 
+                disabled={sendingInvite || !inviteEmail.trim()}
+              >
+                {sendingInvite ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Send Invitation
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
