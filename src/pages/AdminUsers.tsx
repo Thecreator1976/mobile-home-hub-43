@@ -314,16 +314,16 @@ export default function AdminUsers() {
         </span>
       ),
     },
-    {
-      key: "is_paid",
+    ...(isSuperAdmin ? [{
+      key: "is_paid" as keyof UserWithRole,
       header: "Paid",
       sortable: true,
-      render: (user) => (
+      render: (user: UserWithRole) => (
         <Badge variant={user.is_paid ? "default" : "outline"} className={user.is_paid ? "bg-status-closed text-white" : ""}>
           {user.is_paid ? "Paid" : "Free"}
         </Badge>
       ),
-    },
+    }] : []),
     {
       key: "created_at",
       header: "Joined",
@@ -367,14 +367,14 @@ export default function AdminUsers() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className={`grid grid-cols-2 ${isSuperAdmin ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-4`}>
           {isLoading ? (
             <>
               <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
               <StatCardSkeleton />
-              <StatCardSkeleton />
+              {isSuperAdmin && <StatCardSkeleton />}
             </>
           ) : (
             <>
@@ -405,15 +405,17 @@ export default function AdminUsers() {
                   <div className="text-2xl font-bold text-status-offer">{stats.pending}</div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Paid</CardTitle>
-                  <DollarSign className="h-4 w-4 text-status-closed" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-status-closed">{stats.paid}</div>
-                </CardContent>
-              </Card>
+              {isSuperAdmin && (
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Paid</CardTitle>
+                    <DollarSign className="h-4 w-4 text-status-closed" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-status-closed">{stats.paid}</div>
+                  </CardContent>
+                </Card>
+              )}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Admins</CardTitle>
@@ -521,21 +523,23 @@ export default function AdminUsers() {
                 </p>
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Payment Status</label>
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-medium">Paid Subscription</p>
-                    <p className="text-xs text-muted-foreground">
-                      {newIsPaid ? "User has full access" : "User needs to subscribe"}
-                    </p>
+              {isSuperAdmin && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Payment Status</label>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Paid Subscription</p>
+                      <p className="text-xs text-muted-foreground">
+                        {newIsPaid ? "User has full access" : "User needs to subscribe"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={newIsPaid}
+                      onCheckedChange={setNewIsPaid}
+                    />
                   </div>
-                  <Switch
-                    checked={newIsPaid}
-                    onCheckedChange={setNewIsPaid}
-                  />
                 </div>
-              </div>
+              )}
             </div>
 
             <DialogFooter>
