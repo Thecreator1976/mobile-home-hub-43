@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -68,6 +69,7 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 export default function Contracts() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { userRole } = useAuth();
   const { contracts, isLoading, deleteContract, isDeleting } = useContracts();
   const updateContractWithHistory = useUpdateContractWithHistory();
   
@@ -198,6 +200,12 @@ export default function Contracts() {
               Manage and track all generated contracts
             </p>
           </div>
+          {userRole === "admin" && (
+            <Button variant="outline" onClick={() => navigate("/admin/contract-templates")}>
+              <FileText className="mr-2 h-4 w-4" />
+              Manage Templates
+            </Button>
+          )}
         </div>
 
         {/* Filters */}
