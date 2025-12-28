@@ -37,17 +37,28 @@ export default function ForgotPassword() {
         redirectTo: `${window.location.origin}/reset-password`,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Check for rate limiting error
+        if (error.message?.includes('security purposes') || error.status === 429) {
+          toast({
+            title: "Please wait",
+            description: error.message || "You've requested too many reset emails. Please wait before trying again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
       setEmailSent(true);
       toast({
         title: "Email sent",
         description: "Check your inbox for the password reset link.",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to send reset email. Please try again.",
+        description: error?.message || "Failed to send reset email. Please try again.",
         variant: "destructive",
       });
     } finally {
