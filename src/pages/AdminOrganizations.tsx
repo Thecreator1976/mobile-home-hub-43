@@ -471,19 +471,24 @@ export default function AdminOrganizations() {
               Manage Users
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleToggleOrgStatus(org)}>
-              {org.is_active ? (
-                <>
-                  <Pause className="h-4 w-4 mr-2" />
-                  Suspend Organization
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4 mr-2" />
-                  Activate Organization
-                </>
-              )}
-            </DropdownMenuItem>
+            {!org.is_active && (
+              <DropdownMenuItem 
+                className="text-green-600 focus:text-green-600"
+                onClick={() => handleToggleOrgStatus(org)}
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Activate
+              </DropdownMenuItem>
+            )}
+            {org.is_active && (
+              <DropdownMenuItem 
+                className="text-yellow-600 focus:text-yellow-600"
+                onClick={() => handleToggleOrgStatus(org)}
+              >
+                <Pause className="h-4 w-4 mr-2" />
+                Suspend
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="text-destructive focus:text-destructive"
