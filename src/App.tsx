@@ -32,10 +32,12 @@ const Integrations = lazy(() => import("./pages/Integrations"));
 const SellerLeads = lazy(() => import("./pages/SellerLeads"));
 const SellerLeadDetail = lazy(() => import("./pages/SellerLeadDetail"));
 const NewSellerLead = lazy(() => import("./pages/NewSellerLead"));
+const EditSellerLead = lazy(() => import("./pages/EditSellerLead"));
 const MakeOffer = lazy(() => import("./pages/MakeOffer"));
 const Buyers = lazy(() => import("./pages/Buyers"));
 const BuyerDetail = lazy(() => import("./pages/BuyerDetail"));
 const NewBuyer = lazy(() => import("./pages/NewBuyer"));
+const EditBuyer = lazy(() => import("./pages/EditBuyer"));
 const ImportBuyers = lazy(() => import("./pages/ImportBuyers"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
@@ -125,6 +127,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/seller-leads/:id/edit"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <EditSellerLead />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
                 path="/seller-leads/:id/make-offer"
                 element={
                   <LazyAuthRoute requiredRole="agent">
@@ -163,6 +173,14 @@ const App = () => (
                 element={
                   <LazyAuthRoute requiredRole="agent">
                     <ImportBuyers />
+                  </LazyAuthRoute>
+                }
+              />
+              <Route
+                path="/buyers/:id/edit"
+                element={
+                  <LazyAuthRoute requiredRole="agent">
+                    <EditBuyer />
                   </LazyAuthRoute>
                 }
               />
