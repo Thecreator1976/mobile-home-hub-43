@@ -27,6 +27,7 @@ import {
   Image as ImageIcon,
   File,
   TrendingUp,
+  Calculator,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSellerLead, useSellerLeads, LeadStatus } from "@/hooks/useSellerLeads";
@@ -186,6 +187,12 @@ export default function SellerLeadDetail() {
             <PostToSocialButton lead={lead} />
             <CallWithOpenPhoneButton lead={lead} />
             <SMSWithOpenPhoneButton lead={lead} />
+            <Button variant="outline" asChild>
+              <Link to={`/value-estimator?leadId=${lead.id}&homeType=${lead.home_type || 'single'}&yearBuilt=${lead.year_built || ''}&condition=${lead.condition || ''}&length=${lead.length_ft || ''}&width=${lead.width_ft || ''}&parkOwned=${lead.park_owned || false}&lotRent=${lead.lot_rent || ''}`}>
+                <Calculator className="h-4 w-4 mr-2" />
+                Estimate Value
+              </Link>
+            </Button>
             <Button variant="outline" asChild>
               <Link to={`/seller-leads/${lead.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
