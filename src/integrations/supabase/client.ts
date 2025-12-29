@@ -1,10 +1,7 @@
-# NEW SUPABASE CREDENTIALS
-VITE_SUPABASE_URL="https://xiphcbngivfzszxzwitv.supabase.co"
-VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpcGJjYm5naXZmenN6eHphdWl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5NzYzNDUsImV4cCI6MjA4MjU1MjM0NX0.eLRiSWgaDjn8CXpb4i7GjIeoWCGUFTMrWpPQunF97Y8"
-VITE_SUPABASE_PROJECT_ID="xiphcbngivfzszxzwitv"
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from './types';
 
-# Optional: Service role key (for admin operations)
-# VITE_SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhpcGJjYm5naXZmenN6eHphdWl2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2Njk3NjM0NSwiZXhwIjoyMDgyNTUyMzQ1fQ.1dn8k_dSuHmdPNedzfp5BLPi3qYpUmwvS3DHUcE_fro"
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-# Your API (if using hybrid approach)
-# VITE_API_URL="http://localhost:3001"
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
