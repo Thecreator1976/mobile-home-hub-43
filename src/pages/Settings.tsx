@@ -39,7 +39,8 @@ import {
   UserPlus,
   Trash2,
   Check,
-  Ban
+  Ban,
+  Building
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -79,6 +80,10 @@ interface Invitation {
 export default function Settings() {
   const { userOrganization, isSuperAdmin, isTenantAdmin } = useAuth();
   
+  // For super admins, we need to select an org to configure
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
+  
   // General Settings state
   const [generalDialogOpen, setGeneralDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -104,17 +109,44 @@ export default function Settings() {
   const { sendInvitation, sending: sendingInvite } = useInvitations();
 
   const canManageSettings = isSuperAdmin || isTenantAdmin;
+  
+  // Get the effective org ID (user's org or super admin's selected org)
+  const effectiveOrgId = isSuperAdmin ? selectedOrgId : userOrganization?.id;
+  const effectiveOrgName = isSuperAdmin 
+    ? organizations.find(o => o.id === selectedOrgId)?.name 
+    : userOrganization?.name;
+
+  // Load organizations for super admin
+  useEffect(() => {
+    if (isSuperAdmin) {
+      const fetchOrgs = async () => {
+        const { data } = await supabase
+          .from("organizations")
+          .select("id, name")
+          .order("name");
+        
+        if (data && data.length > 0) {
+          setOrganizations(data);
+          // Auto-select first org if none selected
+          if (!selectedOrgId) {
+            setSelectedOrgId(data[0].id);
+          }
+        }
+      };
+      fetchOrgs();
+    }
+  }, [isSuperAdmin]);
 
   // Load organization settings
   const loadSettings = async () => {
-    if (!userOrganization) return;
+    if (!effectiveOrgId) return;
     
     setLoadingSettings(true);
     try {
       const { data, error } = await supabase
         .from("organizations")
         .select("settings")
-        .eq("id", userOrganization.id)
+        .eq("id", effectiveOrgId)
         .single();
 
       if (error) throw error;
@@ -132,7 +164,14 @@ export default function Settings() {
 
   // Save service charges
   const handleSaveServiceCharges = async () => {
-    if (!userOrganization) return;
+    if (!effectiveOrgId) {
+      toast({
+        title: "Error",
+        description: "No organization selected",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setSaving(true);
     try {
@@ -140,7 +179,7 @@ export default function Settings() {
       const { data: existingData } = await supabase
         .from("organizations")
         .select("settings")
-        .eq("id", userOrganization.id)
+        .eq("id", effectiveOrgId)
         .single();
 
       const existingSettings = (existingData?.settings as Record<string, unknown>) || {};
@@ -159,7 +198,7 @@ export default function Settings() {
         .from("organizations")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .update({ settings: updatedSettings as any })
-        .eq("id", userOrganization.id);
+        .eq("id", effectiveOrgId);
 
       if (error) throw error;
 
@@ -181,7 +220,7 @@ export default function Settings() {
 
   // Load team members
   const loadTeamMembers = async () => {
-    if (!userOrganization) return;
+    if (!effectiveOrgId) return;
     
     setLoadingTeam(true);
     try {
@@ -189,12 +228,20 @@ export default function Settings() {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, user_id, email, full_name, status")
-        .eq("organization_id", userOrganization.id);
+        .eq("organization_id", effectiveOrgId);
 
       if (profilesError) throw profilesError;
 
       // Get roles
       const userIds = (profiles || []).map(p => p.user_id);
+      
+      if (userIds.length === 0) {
+        setTeamMembers([]);
+        setInvitations([]);
+        setLoadingTeam(false);
+        return;
+      }
+      
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
         .select("user_id, role")
@@ -222,7 +269,7 @@ export default function Settings() {
       const { data: invites, error: invitesError } = await supabase
         .from("invitations")
         .select("id, email, role, status, created_at, expires_at")
-        .eq("organization_id", userOrganization.id)
+        .eq("organization_id", effectiveOrgId)
         .eq("status", "pending");
 
       if (invitesError) throw invitesError;
@@ -319,12 +366,12 @@ export default function Settings() {
 
   // Send invitation
   const handleSendInvite = async () => {
-    if (!inviteEmail.trim() || !userOrganization) return;
+    if (!inviteEmail.trim() || !effectiveOrgId) return;
 
     const result = await sendInvitation({
       email: inviteEmail.trim(),
-      organization_id: userOrganization.id,
-      organization_name: userOrganization.name,
+      organization_id: effectiveOrgId,
+      organization_name: effectiveOrgName || "Organization",
       role: inviteRole,
     });
 
@@ -336,16 +383,16 @@ export default function Settings() {
   };
 
   useEffect(() => {
-    if (generalDialogOpen && userOrganization) {
+    if (generalDialogOpen && effectiveOrgId) {
       loadSettings();
     }
-  }, [generalDialogOpen, userOrganization]);
+  }, [generalDialogOpen, effectiveOrgId]);
 
   useEffect(() => {
-    if (teamDialogOpen && userOrganization) {
+    if (teamDialogOpen && effectiveOrgId) {
       loadTeamMembers();
     }
-  }, [teamDialogOpen, userOrganization]);
+  }, [teamDialogOpen, effectiveOrgId]);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
@@ -382,6 +429,33 @@ export default function Settings() {
             <p className="text-muted-foreground">Manage your account and application settings</p>
           </div>
         </div>
+
+        {/* Organization Selector for Super Admins */}
+        {isSuperAdmin && organizations.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Select Organization</CardTitle>
+              <CardDescription>As a super admin, select which organization to configure</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={selectedOrgId || ""}
+                onValueChange={setSelectedOrgId}
+              >
+                <SelectTrigger className="w-full md:w-64">
+                  <SelectValue placeholder="Select organization..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* General Settings Card */}
@@ -589,7 +663,7 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Team Management</DialogTitle>
               <DialogDescription>
-                Manage team members and invitations for {userOrganization?.name}
+                Manage team members and invitations for {effectiveOrgName || "your organization"}
               </DialogDescription>
             </DialogHeader>
 
@@ -759,7 +833,7 @@ export default function Settings() {
             <DialogHeader>
               <DialogTitle>Invite Team Member</DialogTitle>
               <DialogDescription>
-                Send an invitation to join {userOrganization?.name}
+                Send an invitation to join {effectiveOrgName || "your organization"}
               </DialogDescription>
             </DialogHeader>
 
