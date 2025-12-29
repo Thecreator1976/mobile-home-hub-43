@@ -2,38 +2,45 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Home, CreditCard, Check, RefreshCw, Loader2 } from "lucide-react";
+import { Home, CreditCard, Check, RefreshCw, Loader2, Building } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export default function PaymentRequired() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, userOrganization, isSuperAdmin, signOut } = useAuth();
   const [checking, setChecking] = useState(false);
 
-  // Check if payment status changed
+  // Super admins should never see this page
+  useEffect(() => {
+    if (isSuperAdmin) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isSuperAdmin, navigate]);
+
+  // Check if organization payment status changed
   const checkPaymentStatus = async () => {
-    if (!user) return;
+    if (!userOrganization) return;
     
     setChecking(true);
     const { data, error } = await supabase
-      .from("profiles")
-      .select("is_paid, status")
-      .eq("user_id", user.id)
+      .from("organizations")
+      .select("is_paid")
+      .eq("id", userOrganization.id)
       .single();
 
     if (!error && data) {
       if (data.is_paid) {
         toast({
           title: "Access Granted!",
-          description: "Your subscription is now active.",
+          description: "Your organization's subscription is now active.",
         });
         navigate("/dashboard", { replace: true });
       } else {
         toast({
           title: "Subscription Required",
-          description: "Your account still requires an active subscription.",
+          description: "Your organization still requires an active subscription.",
           variant: "destructive",
         });
       }
@@ -41,26 +48,26 @@ export default function PaymentRequired() {
     setChecking(false);
   };
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates for organization payment status
   useEffect(() => {
-    if (!user) return;
+    if (!userOrganization) return;
 
     const channel = supabase
-      .channel('payment-status')
+      .channel('org-payment-status')
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${user.id}`,
+          table: 'organizations',
+          filter: `id=eq.${userOrganization.id}`,
         },
         (payload) => {
           const newData = payload.new as { is_paid: boolean };
           if (newData.is_paid) {
             toast({
               title: "Access Granted!",
-              description: "Your subscription is now active.",
+              description: "Your organization's subscription is now active.",
             });
             navigate("/dashboard", { replace: true });
           }
@@ -71,7 +78,7 @@ export default function PaymentRequired() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, navigate]);
+  }, [userOrganization, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -97,12 +104,23 @@ export default function PaymentRequired() {
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <CreditCard className="h-8 w-8 text-primary" />
             </div>
-            <CardTitle className="text-2xl">Subscription Required</CardTitle>
+            <CardTitle className="text-2xl">Organization Subscription Required</CardTitle>
             <CardDescription>
-              Your account has been approved! To access the CRM, please subscribe to one of our plans.
+              Your account has been approved! However, your organization needs an active subscription to access the CRM.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Organization Info */}
+            {userOrganization && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border">
+                <Building className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">{userOrganization.name}</p>
+                  <p className="text-xs text-muted-foreground">Your organization</p>
+                </div>
+              </div>
+            )}
+
             {/* Pricing Card */}
             <div className="border border-primary rounded-lg p-4 bg-primary/5">
               <div className="flex justify-between items-start mb-3">
@@ -112,7 +130,7 @@ export default function PaymentRequired() {
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold">$49</p>
-                  <p className="text-xs text-muted-foreground">/month</p>
+                  <p className="text-xs text-muted-foreground">/month per org</p>
                 </div>
               </div>
               <ul className="space-y-2 text-sm">
@@ -136,7 +154,7 @@ export default function PaymentRequired() {
             </div>
 
             <p className="text-sm text-muted-foreground text-center">
-              Contact your administrator to activate your subscription, or check back after completing payment.
+              Contact your organization's administrator to activate the subscription, or check back after payment is completed.
             </p>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">

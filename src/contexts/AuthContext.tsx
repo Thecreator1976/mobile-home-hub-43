@@ -8,6 +8,7 @@ interface UserOrganization {
   id: string;
   name: string;
   slug: string;
+  is_paid: boolean;
 }
 
 interface AuthContextType {
@@ -94,10 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError || !profileData?.organization_id) {
         setUserOrganization(null);
       } else {
-        // Fetch organization details
+        // Fetch organization details including is_paid
         const { data: orgData, error: orgError } = await supabase
           .from("organizations")
-          .select("id, name, slug")
+          .select("id, name, slug, is_paid")
           .eq("id", profileData.organization_id)
           .single();
 
@@ -108,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             id: orgData.id,
             name: orgData.name,
             slug: orgData.slug,
+            is_paid: orgData.is_paid ?? false,
           });
         }
       }

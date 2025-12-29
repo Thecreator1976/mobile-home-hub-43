@@ -45,7 +45,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Building, Users, Plus, Loader2, MoreHorizontal, Play, Pause, Trash2, UserCog, Check, Ban, UserMinus, Mail } from "lucide-react";
+import { Building, Users, Plus, Loader2, MoreHorizontal, Play, Pause, Trash2, UserCog, Check, Ban, UserMinus, Mail, DollarSign } from "lucide-react";
 import { useInvitations } from "@/hooks/useInvitations";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -58,6 +58,9 @@ interface Organization {
   name: string;
   slug: string;
   is_active: boolean;
+  is_paid: boolean;
+  subscription_tier: string | null;
+  subscription_expires_at: string | null;
   created_at: string;
   user_count: number;
   pending_count: number;
@@ -143,6 +146,9 @@ export default function AdminOrganizations() {
         name: org.name,
         slug: org.slug,
         is_active: org.is_active ?? true,
+        is_paid: org.is_paid ?? false,
+        subscription_tier: org.subscription_tier ?? 'free',
+        subscription_expires_at: org.subscription_expires_at ?? null,
         created_at: org.created_at ?? "",
         user_count: orgStats[org.id]?.total || 0,
         pending_count: orgStats[org.id]?.pending || 0,
@@ -222,6 +228,43 @@ export default function AdminOrganizations() {
       toast({
         title: "Error",
         description: error?.message || "Failed to update organization",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleTogglePaidStatus = async (org: Organization) => {
+    try {
+      const newPaidStatus = !org.is_paid;
+      const updates: {
+        is_paid: boolean;
+        subscription_tier: string;
+        subscription_expires_at: string | null;
+      } = {
+        is_paid: newPaidStatus,
+        subscription_tier: newPaidStatus ? 'pro' : 'free',
+        subscription_expires_at: newPaidStatus 
+          ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() 
+          : null,
+      };
+
+      const { error } = await supabase
+        .from("organizations")
+        .update(updates)
+        .eq("id", org.id);
+
+      if (error) throw error;
+
+      toast({
+        title: newPaidStatus ? "Organization Marked Paid" : "Organization Marked Unpaid",
+        description: `${org.name} subscription ${newPaidStatus ? "activated for 1 year" : "deactivated"}.`,
+      });
+
+      fetchOrganizations();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to update payment status",
         variant: "destructive",
       });
     }
@@ -471,6 +514,25 @@ export default function AdminOrganizations() {
       ),
     },
     {
+      key: "is_paid",
+      header: "Payment",
+      sortable: true,
+      render: (org) => (
+        <div className="flex items-center gap-2">
+          {org.is_paid ? (
+            <Badge className="bg-green-500 text-white">
+              <DollarSign className="h-3 w-3 mr-1" />
+              Paid
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground">
+              Unpaid
+            </Badge>
+          )}
+        </div>
+      ),
+    },
+    {
       key: "is_active",
       header: "Status",
       sortable: true,
@@ -504,6 +566,11 @@ export default function AdminOrganizations() {
             <DropdownMenuItem onClick={() => handleManageUsers(org)}>
               <UserCog className="h-4 w-4 mr-2" />
               Manage Users
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => handleTogglePaidStatus(org)}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              {org.is_paid ? "Mark as Unpaid" : "Mark as Paid"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             {!org.is_active && (
@@ -561,7 +628,7 @@ export default function AdminOrganizations() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Organizations</CardTitle>
@@ -573,11 +640,22 @@ export default function AdminOrganizations() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">Active</CardTitle>
-              <Building className="h-4 w-4 text-green-500" />
+              <CardTitle className="text-sm font-medium">Paid</CardTitle>
+              <DollarSign className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
+                {organizations.filter((o) => o.is_paid).length}
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Active</CardTitle>
+              <Building className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">
                 {organizations.filter((o) => o.is_active).length}
               </div>
             </CardContent>
@@ -596,10 +674,10 @@ export default function AdminOrganizations() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-primary" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-primary">
+              <div className="text-2xl font-bold">
                 {organizations.reduce((sum, o) => sum + o.user_count, 0)}
               </div>
             </CardContent>
