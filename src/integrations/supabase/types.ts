@@ -597,30 +597,39 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_paid: boolean | null
           name: string
           owner_id: string | null
           settings: Json | null
           slug: string
+          subscription_expires_at: string | null
+          subscription_tier: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_paid?: boolean | null
           name: string
           owner_id?: string | null
           settings?: Json | null
           slug: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_paid?: boolean | null
           name?: string
           owner_id?: string | null
           settings?: Json | null
           slug?: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string | null
         }
         Relationships: []

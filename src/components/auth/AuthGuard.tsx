@@ -9,14 +9,23 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isSuperAdmin, userOrganization } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoading && !user) {
       navigate("/login", { replace: true });
+      return;
     }
-  }, [user, isLoading, navigate]);
+
+    // Super admins NEVER get payment blocked - they are platform owners
+    if (isSuperAdmin) return;
+
+    // Check if organization needs to pay (only for non-super admins)
+    if (user && userOrganization && !userOrganization.is_paid) {
+      navigate("/payment-required", { replace: true });
+    }
+  }, [user, isLoading, isSuperAdmin, userOrganization, navigate]);
 
   if (isLoading) {
     return (
