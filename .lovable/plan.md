@@ -1,152 +1,171 @@
 
-# Supabase Security Hardening Plan
+# Server-Side Permission Middleware Implementation Plan
 
 ## Overview
-Your project already has a solid security foundation with RLS enabled on all tables and proper security definer functions. This plan focuses on **fixing the identified vulnerabilities** rather than building from scratch.
+This plan implements a robust server-side permission checking middleware that validates user access rights using the existing database functions. The middleware will leverage Supabase's RPC calls to verify permissions securely on the server side rather than relying on client-side checks.
 
----
+## Current State Analysis
 
-## Phase 1: Enable Leaked Password Protection
+### Existing Infrastructure
+- **Database Functions Available:**
+  - `is_super_admin(_user_id)` - Check if user is a super admin
+  - `has_role(_user_id, _role)` - Check if user has a specific role
+  - `can_access_org(_user_id, _org_id)` - Check if user can access an organization
+  - `is_admin_or_agent(_user_id)` - Check if user is admin or agent
+  - `is_tenant_admin_for_org(_user_id, _org_id)` - Check if user is tenant admin for specific org
+  - `get_user_org(_user_id)` - Get user's organization ID
 
-Enable the built-in protection that checks passwords against known breach databases.
+- **Role Types:** `admin`, `agent`, `viewer`, `super_admin`, `tenant_admin`
 
-**Action**: Update authentication settings to enable leaked password protection.
+- **Current Auth Context:** Provides `userRole`, `isSuperAdmin`, `isTenantAdmin`, `userOrganization`
 
----
+### Gap Analysis
+- Permission checks are scattered across components
+- No centralized middleware for action-based permissions
+- No record-level permission verification
 
-## Phase 2: Fix Cross-Organization Data Leakage
+## Implementation Plan
 
-Several tables allow any admin/agent to access data regardless of organization. We need to add organization-level checks.
+### Step 1: Create Permission Middleware Module
 
-### Tables Requiring Fixes:
+Create `src/lib/permissions.ts` with the following capabilities:
 
-1. **messenger_messages** - Currently only checks `is_admin_or_agent()` without organization verification
-2. **contract_status_history** - Same issue, agents can see contract history from other organizations  
-3. **lead_timeline** - Missing organization scope in SELECT policy
+**Core Functions:**
 
-### Solution Approach:
-For each table, we'll:
-- Join with parent tables to verify organization membership
-- Add explicit `can_access_org()` checks where applicable
-
----
-
-## Phase 3: Strengthen Existing RLS Policies
-
-### messenger_messages Fix:
-```sql
--- Current: Only checks role, not organization
--- Fix: Join with messenger_conversations to verify org access
-DROP POLICY IF EXISTS "Agents and admins can view messages" ON messenger_messages;
-
-CREATE POLICY "Agents and admins can view messages in their org"
-ON messenger_messages FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM messenger_conversations mc
-    WHERE mc.id = messenger_messages.conversation_id
-    AND (
-      public.is_super_admin(auth.uid()) OR
-      (public.can_access_org(auth.uid(), mc.organization_id) AND public.is_admin_or_agent(auth.uid()))
-    )
-  )
-);
+```text
++----------------------------------+
+|     Permission Middleware        |
++----------------------------------+
+| - requireAuth()                  |
+| - requirePermission()            |
+| - checkRecordAccess()            |
+| - getPermissionContext()         |
++----------------------------------+
+          |
+          v
++----------------------------------+
+|     Supabase RPC Functions       |
++----------------------------------+
+| - is_super_admin                 |
+| - has_role                       |
+| - can_access_org                 |
+| - is_admin_or_agent             |
+| - get_user_org                   |
++----------------------------------+
 ```
 
-### contract_status_history Fix:
-```sql
--- Fix: Join with contracts to verify org access
-DROP POLICY IF EXISTS "Admins and agents can view status history" ON contract_status_history;
+**Function Signatures:**
+1. `requireAuth()` - Ensures user is authenticated, returns user data
+2. `requirePermission(table, action, recordId?)` - Validates CRUD permissions
+3. `checkRecordAccess(table, recordId)` - Verifies user can access specific record
+4. `getPermissionContext()` - Returns complete permission context for current user
 
-CREATE POLICY "Admins and agents can view status history in their org"
-ON contract_status_history FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM contracts c
-    WHERE c.id = contract_status_history.contract_id
-    AND (
-      public.is_super_admin(auth.uid()) OR
-      (public.can_access_org(auth.uid(), c.organization_id) AND public.is_admin_or_agent(auth.uid()))
-    )
-  )
-);
-```
+### Step 2: Define Permission Matrix
 
-### lead_timeline Fix:
-```sql
--- Fix: Join with seller_leads to verify org access
-DROP POLICY IF EXISTS "Users can view timeline in their org" ON lead_timeline;
+Create a permission matrix that maps roles to allowed actions:
 
-CREATE POLICY "Users can view timeline in their org"
-ON lead_timeline FOR SELECT
-USING (
-  public.is_super_admin(auth.uid()) OR
-  EXISTS (
-    SELECT 1 FROM seller_leads sl
-    WHERE sl.id = lead_timeline.seller_lead_id
-    AND (
-      public.can_access_org(auth.uid(), sl.organization_id) AND
-      (sl.created_by = auth.uid() OR public.is_admin_or_agent(auth.uid()))
-    )
-  )
-);
-```
+| Role | SELECT | INSERT | UPDATE | DELETE |
+|------|--------|--------|--------|--------|
+| super_admin | All | All | All | All |
+| tenant_admin | Org | Org | Org | Org |
+| admin | Org | Org | Org | Org |
+| agent | Org | Own | Own | No |
+| viewer | Org | No | No | No |
 
----
+### Step 3: Create Custom React Hook
 
-## Phase 4: Update Mutation Policies for Same Tables
+Create `src/hooks/usePermissions.ts`:
+- `usePermissions()` - Hook that provides permission checking functions
+- `useCanPerform(table, action, recordId?)` - Hook for specific permission checks
+- `useRecordAccess(table, recordId)` - Hook for record-level access
 
-Apply the same organization-scoped fixes to INSERT, UPDATE, DELETE policies on:
-- `messenger_messages` (ALL policy)
-- `contract_status_history` (INSERT policy)
-- `lead_timeline` (INSERT policy)
+### Step 4: Create Permission Guard Component
 
----
+Create `src/components/auth/PermissionGuard.tsx`:
+- Wraps components that require specific permissions
+- Shows appropriate UI when access is denied
+- Handles loading states
 
-## Phase 5: Security Verification
+### Step 5: Update Existing Hooks
 
-After applying fixes:
-
-1. **Test cross-organization isolation** - Verify agents in Org A cannot see data from Org B
-2. **Test super_admin access** - Confirm super_admin can still access all organizations
-3. **Test normal user flows** - Ensure legitimate access still works
-4. **Run security scan again** - Verify findings are resolved
+Modify data hooks to use permission middleware:
+- `useSellerLeads.ts` - Add permission checks for CRUD operations
+- `useBuyers.ts` - Add permission checks for CRUD operations
+- Other hooks as needed
 
 ---
 
 ## Technical Details
 
-### Files That Will Be Created/Modified:
-- New SQL migration for RLS policy updates (via database migration tool)
-- No application code changes required
+### File: `src/lib/permissions.ts`
 
-### Database Changes Summary:
-- 6 RLS policies will be dropped and recreated with organization scoping
-- Authentication config update for leaked password protection
+This module will:
+1. Export type definitions for permissions
+2. Export async functions that call Supabase RPCs
+3. Handle caching of permission results (optional, for performance)
+4. Return structured permission responses
 
-### Existing Security Functions (No Changes Needed):
-- `is_super_admin()` - Already correctly implemented
-- `can_access_org()` - Already correctly implemented
-- `is_admin_or_agent()` - Correct, but needs to be paired with org checks
-- `has_role()` - Correctly implemented
-- `get_user_org()` - Correctly implemented
+### File: `src/hooks/usePermissions.ts`
+
+This hook will:
+1. Use the AuthContext for user data
+2. Call permission functions from `src/lib/permissions.ts`
+3. Provide memoized permission checking functions
+4. Cache results using React Query
+
+### File: `src/components/auth/PermissionGuard.tsx`
+
+This component will:
+1. Accept `table`, `action`, and optional `recordId` props
+2. Check permissions on mount
+3. Render children if allowed, or fallback UI if denied
+4. Support custom denied message
 
 ---
 
-## Risk Assessment
+## Security Considerations
 
-| Change | Risk Level | Mitigation |
-|--------|------------|------------|
-| Policy updates | Low | Policies are additive, existing access patterns preserved |
-| Organization joins | Low | Uses existing organization_id columns |
-| Password protection | None | Only affects new signups/password changes |
+1. **Server-Side Validation:** All permission checks use Supabase RPC functions that run on the database server with `SECURITY DEFINER`
+
+2. **No Client-Side Trust:** The middleware never trusts client-side role data; it always verifies via RPC
+
+3. **Record-Level Security:** For record access, the middleware queries the database to verify organization ownership
+
+4. **Fail-Secure:** If permission check fails or returns undefined, access is denied by default
 
 ---
 
-## Expected Outcome
+## Files to Create/Modify
 
-After implementation:
-- Cross-organization data leakage eliminated
-- Leaked password protection enabled
-- Security scan should show 0 errors, reduced warnings
-- All legitimate user access preserved
+| File | Action | Description |
+|------|--------|-------------|
+| `src/lib/permissions.ts` | Create | Core permission middleware functions |
+| `src/hooks/usePermissions.ts` | Create | React hooks for permission checking |
+| `src/components/auth/PermissionGuard.tsx` | Create | Permission wrapper component |
+| `src/hooks/useSellerLeads.ts` | Modify | Add permission checks |
+| `src/hooks/useBuyers.ts` | Modify | Add permission checks |
+
+---
+
+## Usage Examples
+
+**Using the middleware in a hook:**
+```typescript
+const { canDelete } = await requirePermission('seller_leads', 'delete', leadId);
+if (!canDelete) {
+  throw new Error('Permission denied');
+}
+```
+
+**Using the PermissionGuard component:**
+```tsx
+<PermissionGuard table="seller_leads" action="delete" recordId={lead.id}>
+  <Button onClick={handleDelete}>Delete Lead</Button>
+</PermissionGuard>
+```
+
+**Using the usePermissions hook:**
+```typescript
+const { canPerform, isLoading } = usePermissions();
+const canEdit = canPerform('seller_leads', 'update', lead.id);
+```
