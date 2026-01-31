@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { HomeType } from "./useSellerLeads";
+import { requirePermission } from "@/lib/permissions";
 
 export interface Buyer {
   id: string;
@@ -53,6 +54,12 @@ export function useBuyers() {
 
   const createBuyer = useMutation({
     mutationFn: async (input: CreateBuyerInput) => {
+      // Server-side permission check
+      const permission = await requirePermission("buyers", "insert");
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       const { data, error } = await supabase
         .from("buyers")
         .insert({
@@ -83,6 +90,12 @@ export function useBuyers() {
 
   const updateBuyer = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Buyer> & { id: string }) => {
+      // Server-side permission check with record ID
+      const permission = await requirePermission("buyers", "update", id);
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       const { data, error } = await supabase
         .from("buyers")
         .update(updates)
@@ -111,6 +124,12 @@ export function useBuyers() {
 
   const deleteBuyer = useMutation({
     mutationFn: async (id: string) => {
+      // Server-side permission check with record ID
+      const permission = await requirePermission("buyers", "delete", id);
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       const { error } = await supabase
         .from("buyers")
         .delete()

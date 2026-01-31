@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { requirePermission } from "@/lib/permissions";
 
 export type LeadStatus = "new" | "contacted" | "offer_made" | "under_contract" | "closed" | "lost";
 export type HomeType = "single" | "double" | "triple";
@@ -115,6 +116,12 @@ export function useSellerLeads() {
 
   const createLead = useMutation({
     mutationFn: async (input: CreateLeadInput) => {
+      // Server-side permission check
+      const permission = await requirePermission("seller_leads", "insert");
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       const { data, error } = await supabase
         .from("seller_leads")
         .insert({
@@ -147,6 +154,12 @@ export function useSellerLeads() {
 
   const updateLead = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SellerLead> & { id: string }) => {
+      // Server-side permission check with record ID
+      const permission = await requirePermission("seller_leads", "update", id);
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       // Get current lead to check for status change
       const { data: currentLead } = await supabase
         .from("seller_leads")
@@ -188,6 +201,12 @@ export function useSellerLeads() {
 
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
+      // Server-side permission check with record ID
+      const permission = await requirePermission("seller_leads", "delete", id);
+      if (!permission.allowed) {
+        throw new Error(permission.reason || "Permission denied");
+      }
+
       const { error } = await supabase
         .from("seller_leads")
         .delete()

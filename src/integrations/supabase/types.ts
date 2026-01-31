@@ -1116,7 +1116,9 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
-      get_user_org: { Args: { _user_id: string }; Returns: string }
+      get_user_org:
+        | { Args: never; Returns: string }
+        | { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1132,6 +1134,8 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      safe_function: { Args: never; Returns: undefined }
+      safe_query_param: { Args: { param: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin"
