@@ -5,6 +5,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hub-signature-256",
 };
 
+// Generate a safe reference ID for error tracking
+function generateSafeReferenceId(): string {
+  return `err_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+}
+
+// Safe error handler - logs securely without exposing sensitive data
+function safeErrorHandler(error: unknown, context?: string): { error: string; referenceId: string } {
+  const referenceId = generateSafeReferenceId();
+  
+  // Log safely without sensitive data
+  console.error("Safe error log:", {
+    context,
+    referenceId,
+    errorType: error instanceof Error ? error.name : "Unknown",
+    errorCode: (error as { code?: string })?.code || "unknown",
+    timestamp: new Date().toISOString(),
+    // Never log: full error message, stack traces, request bodies, user data
+  });
+  
+  // Return safe error to client
+  return {
+    error: "An error occurred",
+    referenceId, // For tracking without exposing details
+  };
+}
+
 // HMAC-SHA256 signature verification
 async function verifySignature(body: string, signature: string, secret: string): Promise<boolean> {
   const encoder = new TextEncoder();
@@ -19,7 +45,17 @@ async function verifySignature(body: string, signature: string, secret: string):
   const hashArray = Array.from(new Uint8Array(signatureBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
   const expectedSignature = `sha256=${hashHex}`;
-  return signature === expectedSignature;
+  
+  // Use timing-safe comparison to prevent timing attacks
+  if (signature.length !== expectedSignature.length) {
+    return false;
+  }
+  
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 Deno.serve(async (req) => {
@@ -40,7 +76,7 @@ Deno.serve(async (req) => {
       const verifyToken = Deno.env.get("FACEBOOK_VERIFY_TOKEN");
 
       if (!verifyToken) {
-        console.error("FACEBOOK_VERIFY_TOKEN not configured");
+        console.error("Webhook configuration error: verify token missing");
         return new Response("Webhook not configured", { status: 500, headers: corsHeaders });
       }
 
@@ -48,7 +84,7 @@ Deno.serve(async (req) => {
         console.log("Webhook verified successfully");
         return new Response(challenge, { status: 200, headers: corsHeaders });
       } else {
-        console.error("Verification failed. Mode:", mode, "Token match:", token === verifyToken);
+        console.error("Webhook verification failed - mode or token mismatch");
         return new Response("Verification failed", { status: 403, headers: corsHeaders });
       }
     }
@@ -58,7 +94,7 @@ Deno.serve(async (req) => {
       const appSecret = Deno.env.get("FACEBOOK_APP_SECRET");
       
       if (!appSecret) {
-        console.error("FACEBOOK_APP_SECRET not configured");
+        console.error("Webhook configuration error: app secret missing");
         return new Response("Webhook not configured", { status: 500, headers: corsHeaders });
       }
 
@@ -78,7 +114,7 @@ Deno.serve(async (req) => {
       }
 
       const data = JSON.parse(body);
-      console.log("Received webhook data:", JSON.stringify(data, null, 2));
+      // Don't log full webhook data - only log processing status
 
       // Initialize Supabase client
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -100,7 +136,8 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            console.log(`Processing message from ${senderId}: ${messageText}`);
+            // Log message received without exposing content
+            console.log(`Processing message from sender (ID hidden for privacy)`);
 
             // Find or create conversation
             let { data: conversation, error: convError } = await supabase
@@ -165,9 +202,9 @@ Deno.serve(async (req) => {
 
     return new Response("Method not allowed", { status: 405, headers: corsHeaders });
   } catch (error) {
-    console.error("Webhook error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    // Use safe error handler to prevent leaking sensitive information
+    const safeError = safeErrorHandler(error, "facebook-messenger-webhook");
+    return new Response(JSON.stringify(safeError), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
