@@ -711,6 +711,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_paid: boolean | null
+          is_super_admin: boolean | null
           organization_id: string | null
           status: string | null
           subscription_expires_at: string | null
@@ -725,6 +726,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_paid?: boolean | null
+          is_super_admin?: boolean | null
           organization_id?: string | null
           status?: string | null
           subscription_expires_at?: string | null
@@ -739,6 +741,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_paid?: boolean | null
+          is_super_admin?: boolean | null
           organization_id?: string | null
           status?: string | null
           subscription_expires_at?: string | null
@@ -815,6 +818,53 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      security_audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          organization_id: string | null
+          record_id: string | null
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          organization_id?: string | null
+          record_id?: string | null
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "security_audit_logs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1038,7 +1088,24 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_dashboard: {
+        Row: {
+          category: string | null
+          count: number | null
+          details: string | null
+        }
+        Relationships: []
+      }
+      security_monitoring: {
+        Row: {
+          action_type: string | null
+          day: string | null
+          orgs_affected: number | null
+          total_events: number | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_org: {
@@ -1058,7 +1125,9 @@ export type Database = {
         Returns: boolean
       }
       is_admin_or_agent: { Args: { _user_id: string }; Returns: boolean }
-      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin_for_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean

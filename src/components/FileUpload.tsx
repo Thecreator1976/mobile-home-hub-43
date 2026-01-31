@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface FileUploadProps {
   bucket: string;
@@ -27,6 +28,7 @@ export function FileUpload({
   onError,
   className,
 }: FileUploadProps) {
+  const { userOrganization } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [progress, setProgress] = useState(0);
@@ -62,14 +64,28 @@ export function FileUpload({
       return;
     }
 
+    // Require organization context for secure uploads
+    if (!userOrganization?.id) {
+      toast({
+        title: "Upload Error",
+        description: "Organization context required for uploads",
+        variant: "destructive",
+      });
+      onError?.(new Error("Organization context required"));
+      return;
+    }
+
     setStatus("uploading");
     setFileName(file.name);
     setProgress(0);
 
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = folder ? `${folder}/${fileName}` : fileName;
+      const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      // Use organization-scoped path for storage RLS policies
+      const orgFolder = userOrganization.id;
+      const subFolder = folder ? `${folder}/${uniqueFileName}` : uniqueFileName;
+      const filePath = `${orgFolder}/${subFolder}`;
 
       // Simulate progress (Supabase doesn't provide upload progress)
       const progressInterval = setInterval(() => {

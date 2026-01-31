@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Upload, Image, File, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface DocumentsData {
   photos: string[];
@@ -18,13 +19,21 @@ interface DocumentsFormProps {
 }
 
 export default function DocumentsForm({ data, onChange }: DocumentsFormProps) {
+  const { userOrganization } = useAuth();
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState(false);
 
   const uploadToStorage = async (file: globalThis.File, folder: string): Promise<{ url: string; path: string } | null> => {
+    // Require organization context for secure uploads
+    if (!userOrganization?.id) {
+      console.error("Organization context required for uploads");
+      return null;
+    }
+
     const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
+    const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    // Use organization-scoped path for storage RLS policies
+    const filePath = `${userOrganization.id}/${folder}/${uniqueFileName}`;
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("documents")
