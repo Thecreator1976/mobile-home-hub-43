@@ -1,24 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Lock, CheckCircle, Loader2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 
 const resetPasswordSchema = z
   .object({
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Password must contain at least one number"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -33,6 +29,7 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<ResetPasswordData>({
@@ -42,6 +39,12 @@ export default function ResetPassword() {
       confirmPassword: "",
     },
   });
+
+  const handlePasswordValidationChange = useCallback((isValid: boolean) => {
+    setIsPasswordValid(isValid);
+  }, []);
+
+  const watchPassword = form.watch("password");
 
   useEffect(() => {
     // Check if we have access_token in URL (from reset email)
@@ -60,6 +63,15 @@ export default function ResetPassword() {
   }, [navigate]);
 
   const onSubmit = async (data: ResetPasswordData) => {
+    if (!isPasswordValid) {
+      toast({
+        title: "Password not strong enough",
+        description: "Please choose a stronger password that meets all requirements.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -152,6 +164,11 @@ export default function ResetPassword() {
                         </button>
                       </div>
                     </FormControl>
+                    <PasswordStrengthIndicator
+                      password={watchPassword}
+                      onValidationChange={handlePasswordValidationChange}
+                      checkBreaches={true}
+                    />
                     <FormMessage />
                   </FormItem>
                 )}
@@ -185,16 +202,6 @@ export default function ResetPassword() {
                   </FormItem>
                 )}
               />
-
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Password requirements:</p>
-                <ul className="list-disc pl-4 space-y-0.5">
-                  <li>At least 8 characters</li>
-                  <li>One uppercase letter</li>
-                  <li>One lowercase letter</li>
-                  <li>One number</li>
-                </ul>
-              </div>
 
               <Button variant="gradient" className="w-full" type="submit" disabled={isLoading}>
                 {isLoading ? (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Home, Lock, ArrowRight, Loader2, CheckCircle, XCircle, Building, Shield
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-
+import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
 interface InvitationData {
   id: string;
   email: string;
@@ -30,6 +30,11 @@ export default function AcceptInvite() {
   const [error, setError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
+
+  const handlePasswordValidationChange = useCallback((isValid: boolean) => {
+    setIsPasswordValid(isValid);
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -96,10 +101,10 @@ export default function AcceptInvite() {
 
     if (!invitation) return;
 
-    if (password.length < 6) {
+    if (!isPasswordValid) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 6 characters.",
+        title: "Password not strong enough",
+        description: "Please choose a stronger password that meets all requirements.",
         variant: "destructive",
       });
       return;
@@ -304,9 +309,14 @@ export default function AcceptInvite() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isSubmitting}
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
+                <PasswordStrengthIndicator
+                  password={password}
+                  onValidationChange={handlePasswordValidationChange}
+                  checkBreaches={true}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
@@ -321,9 +331,12 @@ export default function AcceptInvite() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={isSubmitting}
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="text-sm text-destructive">Passwords don't match</p>
+                )}
               </div>
               <Button variant="gradient" className="w-full" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
