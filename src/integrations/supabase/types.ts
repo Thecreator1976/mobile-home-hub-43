@@ -560,6 +560,7 @@ export type Database = {
           facebook_message_id: string | null
           id: string
           message_type: string | null
+          organization_id: string | null
           read_at: string | null
         }
         Insert: {
@@ -570,6 +571,7 @@ export type Database = {
           facebook_message_id?: string | null
           id?: string
           message_type?: string | null
+          organization_id?: string | null
           read_at?: string | null
         }
         Update: {
@@ -580,6 +582,7 @@ export type Database = {
           facebook_message_id?: string | null
           id?: string
           message_type?: string | null
+          organization_id?: string | null
           read_at?: string | null
         }
         Relationships: [
@@ -588,6 +591,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "messenger_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -1090,9 +1100,9 @@ export type Database = {
     Views: {
       security_dashboard: {
         Row: {
-          category: string | null
-          count: number | null
-          details: string | null
+          metric: string | null
+          section: string | null
+          value: string | null
         }
         Relationships: []
       }
@@ -1136,6 +1146,9 @@ export type Database = {
       }
       safe_function: { Args: never; Returns: undefined }
       safe_query_param: { Args: { param: string }; Returns: string }
+      sanitize_text: { Args: { input: string }; Returns: string }
+      validate_email: { Args: { email: string }; Returns: boolean }
+      validate_phone: { Args: { phone: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin"
