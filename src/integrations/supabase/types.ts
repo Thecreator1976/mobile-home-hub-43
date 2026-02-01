@@ -72,10 +72,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "appointments_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "secure_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "test_buyers_simple"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "appointments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
           {
@@ -142,6 +163,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "buyers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_access_audit: {
+        Row: {
+          access_type: string | null
+          accessed_at: string | null
+          id: string
+          ip_address: unknown
+          organization_id: string | null
+          record_id: string | null
+          table_name: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_type?: string | null
+          accessed_at?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          record_id?: string | null
+          table_name: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_type?: string | null
+          accessed_at?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          record_id?: string | null
+          table_name?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_access_audit_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -295,6 +360,13 @@ export type Database = {
             foreignKeyName: "contracts_seller_lead_id_fkey"
             columns: ["seller_lead_id"]
             isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
@@ -306,6 +378,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dashboard_access_log: {
+        Row: {
+          accessed_at: string | null
+          dashboard_name: string | null
+          id: string
+          ip_address: unknown
+          organization_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accessed_at?: string | null
+          dashboard_name?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accessed_at?: string | null
+          dashboard_name?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       expenses: {
         Row: {
@@ -350,6 +452,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
           {
@@ -482,6 +591,13 @@ export type Database = {
             foreignKeyName: "lead_timeline_seller_lead_id_fkey"
             columns: ["seller_lead_id"]
             isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
@@ -496,7 +612,7 @@ export type Database = {
           facebook_user_name: string | null
           id: string
           last_message_at: string | null
-          organization_id: string | null
+          organization_id: string
           profile_pic_url: string | null
           seller_lead_id: string | null
           status: string | null
@@ -509,7 +625,7 @@ export type Database = {
           facebook_user_name?: string | null
           id?: string
           last_message_at?: string | null
-          organization_id?: string | null
+          organization_id: string
           profile_pic_url?: string | null
           seller_lead_id?: string | null
           status?: string | null
@@ -522,7 +638,7 @@ export type Database = {
           facebook_user_name?: string | null
           id?: string
           last_message_at?: string | null
-          organization_id?: string | null
+          organization_id?: string
           profile_pic_url?: string | null
           seller_lead_id?: string | null
           status?: string | null
@@ -536,10 +652,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "secure_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "test_buyers_simple"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messenger_conversations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
           {
@@ -560,7 +697,7 @@ export type Database = {
           facebook_message_id: string | null
           id: string
           message_type: string | null
-          organization_id: string | null
+          organization_id: string
           read_at: string | null
         }
         Insert: {
@@ -571,7 +708,7 @@ export type Database = {
           facebook_message_id?: string | null
           id?: string
           message_type?: string | null
-          organization_id?: string | null
+          organization_id: string
           read_at?: string | null
         }
         Update: {
@@ -582,7 +719,7 @@ export type Database = {
           facebook_message_id?: string | null
           id?: string
           message_type?: string | null
-          organization_id?: string | null
+          organization_id?: string
           read_at?: string | null
         }
         Relationships: [
@@ -591,6 +728,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "messenger_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "secure_messenger_conversations"
             referencedColumns: ["id"]
           },
           {
@@ -708,10 +852,50 @@ export type Database = {
             foreignKeyName: "personal_advances_seller_lead_id_fkey"
             columns: ["seller_lead_id"]
             isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_advances_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
         ]
+      }
+      profile_access_audit: {
+        Row: {
+          accessed_at: string | null
+          accessed_via: string | null
+          id: string
+          ip_address: unknown
+          organization_id: string | null
+          user_agent: string | null
+          viewed_profile_id: string | null
+          viewer_id: string | null
+        }
+        Insert: {
+          accessed_at?: string | null
+          accessed_via?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          user_agent?: string | null
+          viewed_profile_id?: string | null
+          viewer_id?: string | null
+        }
+        Update: {
+          accessed_at?: string | null
+          accessed_via?: string | null
+          id?: string
+          ip_address?: unknown
+          organization_id?: string | null
+          user_agent?: string | null
+          viewed_profile_id?: string | null
+          viewer_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -827,10 +1011,53 @@ export type Database = {
             foreignKeyName: "purchase_orders_seller_lead_id_fkey"
             columns: ["seller_lead_id"]
             isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
         ]
+      }
+      security_audit_changes: {
+        Row: {
+          change_reason: string | null
+          change_type: string | null
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          new_value: string | null
+          object_name: string | null
+          object_type: string | null
+          old_value: string | null
+        }
+        Insert: {
+          change_reason?: string | null
+          change_type?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_value?: string | null
+          object_name?: string | null
+          object_type?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          change_reason?: string | null
+          change_type?: string | null
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          new_value?: string | null
+          object_name?: string | null
+          object_type?: string | null
+          old_value?: string | null
+        }
+        Relationships: []
       }
       security_audit_logs: {
         Row: {
@@ -1073,6 +1300,13 @@ export type Database = {
             foreignKeyName: "social_posts_queue_seller_lead_id_fkey"
             columns: ["seller_lead_id"]
             isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_posts_queue_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
             referencedRelation: "seller_leads"
             referencedColumns: ["id"]
           },
@@ -1098,6 +1332,285 @@ export type Database = {
       }
     }
     Views: {
+      logged_dashboard: {
+        Row: {
+          dashboard_section: string | null
+          metric_name: string | null
+          metric_value: string | null
+        }
+        Relationships: []
+      }
+      organization_directory: {
+        Row: {
+          first_name: string | null
+          full_name: string | null
+          id: string | null
+          last_initial: string | null
+          masked_email: string | null
+          organization_id: string | null
+        }
+        Insert: {
+          first_name?: never
+          full_name?: string | null
+          id?: string | null
+          last_initial?: never
+          masked_email?: never
+          organization_id?: string | null
+        }
+        Update: {
+          first_name?: never
+          full_name?: string | null
+          id?: string | null
+          last_initial?: never
+          masked_email?: never
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_metrics_dashboard: {
+        Row: {
+          dashboard_section: string | null
+          metric_name: string | null
+          metric_value: string | null
+        }
+        Relationships: []
+      }
+      role_based_dashboard: {
+        Row: {
+          dashboard_section: string | null
+          metric_name: string | null
+          metric_value: string | null
+        }
+        Relationships: []
+      }
+      secure_buyers: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string | null
+          name: string | null
+          organization_id: string | null
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: never
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          name?: string | null
+          organization_id?: string | null
+          phone?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secure_messenger_conversations: {
+        Row: {
+          buyer_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string | null
+          organization_id: string | null
+          seller_lead_id: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          organization_id?: string | null
+          seller_lead_id?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string | null
+          organization_id?: string | null
+          seller_lead_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "secure_buyers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "test_buyers_simple"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "seller_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secure_profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_super_admin: boolean | null
+          organization_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          is_super_admin?: never
+          organization_id?: never
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          is_super_admin?: never
+          organization_id?: never
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      secure_seller_leads: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string | null
+          notes: string | null
+          organization_id: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["lead_status"] | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: never
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          phone?: never
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seller_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secure_user_emails: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          organization_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          organization_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          organization_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_dashboard: {
         Row: {
           metric: string | null
@@ -1116,6 +1629,72 @@ export type Database = {
         }
         Relationships: []
       }
+      super_admin_dashboard: {
+        Row: {
+          dashboard_section: string | null
+          metric_name: string | null
+          metric_value: string | null
+        }
+        Relationships: []
+      }
+      test_buyers_simple: {
+        Row: {
+          can_access_org_result: boolean | null
+          created_by: string | null
+          email: string | null
+          id: string | null
+          is_admin_or_agent_result: boolean | null
+          is_my_record: boolean | null
+          is_super_admin_result: boolean | null
+          name: string | null
+          organization_id: string | null
+          phone: string | null
+          user_org: string | null
+        }
+        Insert: {
+          can_access_org_result?: never
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          is_admin_or_agent_result?: never
+          is_my_record?: never
+          is_super_admin_result?: never
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          user_org?: never
+        }
+        Update: {
+          can_access_org_result?: never
+          created_by?: string | null
+          email?: never
+          id?: string | null
+          is_admin_or_agent_result?: never
+          is_my_record?: never
+          is_super_admin_result?: never
+          name?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          user_org?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_personal_dashboard: {
+        Row: {
+          dashboard_section: string | null
+          metric_name: string | null
+          metric_value: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_access_org: {
@@ -1126,17 +1705,44 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      can_view_user_email: {
+        Args: { viewed_user_id: string; viewer_id: string }
+        Returns: boolean
+      }
+      get_dashboard_with_logging: {
+        Args: never
+        Returns: {
+          dashboard_section: string
+          metric_name: string
+          metric_value: string
+        }[]
+      }
+      get_role_based_dashboard: {
+        Args: never
+        Returns: {
+          dashboard_section: string
+          metric_name: string
+          metric_value: string
+        }[]
+      }
       get_user_org:
         | { Args: never; Returns: string }
         | { Args: { _user_id: string }; Returns: string }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_admin_or_agent: { Args: { _user_id: string }; Returns: boolean }
+      has_role:
+        | {
+            Args: { _role: Database["public"]["Enums"]["app_role"] }
+            Returns: boolean
+          }
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+      is_admin_or_agent:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_super_admin:
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
@@ -1145,7 +1751,9 @@ export type Database = {
         Returns: boolean
       }
       safe_function: { Args: never; Returns: undefined }
+      safe_organization_count: { Args: never; Returns: number }
       safe_query_param: { Args: { param: string }; Returns: string }
+      safe_user_count: { Args: never; Returns: number }
       sanitize_text: { Args: { input: string }; Returns: string }
       validate_email: { Args: { email: string }; Returns: boolean }
       validate_phone: { Args: { phone: string }; Returns: boolean }
