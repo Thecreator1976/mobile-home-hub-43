@@ -82,7 +82,7 @@ export type Database = {
             foreignKeyName: "appointments_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "test_buyers_simple"
+            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -662,7 +662,7 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "test_buyers_simple"
+            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -745,6 +745,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      organization_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          organization_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       organizations: {
         Row: {
@@ -1332,6 +1356,75 @@ export type Database = {
       }
     }
     Views: {
+      access_control_demo: {
+        Row: {
+          access_level: string | null
+          access_summary: string | null
+          accessible_buyers: number | null
+          accessible_leads: number | null
+          can_see_contacts: boolean | null
+          can_see_financials: boolean | null
+          email: string | null
+          is_super_admin: boolean | null
+          org_role: string | null
+          test_user: string | null
+        }
+        Relationships: []
+      }
+      access_control_demo_simple: {
+        Row: {
+          access_level: string | null
+          buyers_in_org: number | null
+          email: string | null
+          full_name: string | null
+          leads_in_org: number | null
+          org_role: string | null
+          permissions_summary: string | null
+          users_in_org: number | null
+        }
+        Relationships: []
+      }
+      access_control_summary: {
+        Row: {
+          access_level: string | null
+          email: string | null
+          expected_buyers_visible: number | null
+          expected_leads_visible: number | null
+          permissions_description: string | null
+          total_buyers_in_org: number | null
+          total_leads_in_org: number | null
+          total_users_in_org: number | null
+        }
+        Relationships: []
+      }
+      admin_dashboard: {
+        Row: {
+          category: string | null
+          metric: string | null
+          value: string | null
+        }
+        Relationships: []
+      }
+      current_user_access: {
+        Row: {
+          access_level: string | null
+          email: string | null
+          full_name: string | null
+          is_super_admin: boolean | null
+          organization_id: string | null
+          organization_role: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       logged_dashboard: {
         Row: {
           dashboard_section: string | null
@@ -1395,32 +1488,20 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          credit_score: number | null
           email: string | null
+          home_types: Database["public"]["Enums"]["home_type"][] | null
           id: string | null
+          locations: string[] | null
+          max_price: number | null
+          min_price: number | null
           name: string | null
+          notes: string | null
           organization_id: string | null
           phone: string | null
+          status: string | null
           updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          email?: never
-          id?: string | null
-          name?: string | null
-          organization_id?: string | null
-          phone?: never
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          email?: never
-          id?: string | null
-          name?: string | null
-          organization_id?: string | null
-          phone?: never
-          updated_at?: string | null
+          user_access_level: string | null
         }
         Relationships: [
           {
@@ -1437,25 +1518,15 @@ export type Database = {
           buyer_id: string | null
           created_at: string | null
           created_by: string | null
+          facebook_user_id: string | null
+          facebook_user_name: string | null
           id: string | null
+          last_message_at: string | null
           organization_id: string | null
+          profile_pic_url: string | null
           seller_lead_id: string | null
-        }
-        Insert: {
-          buyer_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          organization_id?: string | null
-          seller_lead_id?: string | null
-        }
-        Update: {
-          buyer_id?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string | null
-          organization_id?: string | null
-          seller_lead_id?: string | null
+          status: string | null
+          user_access_level: string | null
         }
         Relationships: [
           {
@@ -1476,7 +1547,7 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "test_buyers_simple"
+            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -1504,70 +1575,59 @@ export type Database = {
       }
       secure_profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
           id: string | null
+          is_paid: boolean | null
           is_super_admin: boolean | null
           organization_id: string | null
+          status: string | null
+          subscription_expires_at: string | null
+          subscription_tier: string | null
           updated_at: string | null
+          user_access_level: string | null
+          user_id: string | null
         }
-        Insert: {
-          created_at?: string | null
-          email?: never
-          full_name?: string | null
-          id?: string | null
-          is_super_admin?: never
-          organization_id?: never
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: never
-          full_name?: string | null
-          id?: string | null
-          is_super_admin?: never
-          organization_id?: never
-          updated_at?: string | null
-        }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       secure_seller_leads: {
         Row: {
           address: string | null
+          asking_price: number | null
+          city: string | null
+          condition: number | null
           created_at: string | null
           created_by: string | null
           email: string | null
+          estimated_value: number | null
+          home_type: Database["public"]["Enums"]["home_type"] | null
           id: string | null
+          length_ft: number | null
+          lot_rent: number | null
+          name: string | null
           notes: string | null
           organization_id: string | null
+          owed_amount: number | null
+          park_owned: boolean | null
           phone: string | null
+          state: string | null
           status: Database["public"]["Enums"]["lead_status"] | null
+          target_offer: number | null
           updated_at: string | null
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          email?: never
-          id?: string | null
-          notes?: string | null
-          organization_id?: string | null
-          phone?: never
-          status?: Database["public"]["Enums"]["lead_status"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          address?: string | null
-          created_at?: string | null
-          created_by?: string | null
-          email?: never
-          id?: string | null
-          notes?: string | null
-          organization_id?: string | null
-          phone?: never
-          status?: Database["public"]["Enums"]["lead_status"] | null
-          updated_at?: string | null
+          user_access_level: string | null
+          width_ft: number | null
+          year_built: number | null
+          zip: string | null
         }
         Relationships: [
           {
@@ -1579,37 +1639,14 @@ export type Database = {
           },
         ]
       }
-      secure_user_emails: {
+      secure_tables_summary: {
         Row: {
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string | null
-          organization_id: string | null
+          creators: number | null
+          organizations: number | null
+          table_name: string | null
+          total_records: number | null
         }
-        Insert: {
-          created_at?: string | null
-          email?: never
-          full_name?: string | null
-          id?: string | null
-          organization_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: never
-          full_name?: string | null
-          id?: string | null
-          organization_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       security_dashboard: {
         Row: {
@@ -1637,49 +1674,56 @@ export type Database = {
         }
         Relationships: []
       }
-      test_buyers_simple: {
+      test_secure_buyers: {
         Row: {
-          can_access_org_result: boolean | null
+          access_level: string | null
           created_by: string | null
-          email: string | null
           id: string | null
-          is_admin_or_agent_result: boolean | null
-          is_my_record: boolean | null
-          is_super_admin_result: boolean | null
           name: string | null
           organization_id: string | null
-          phone: string | null
-          user_org: string | null
         }
         Insert: {
-          can_access_org_result?: never
+          access_level?: never
           created_by?: string | null
-          email?: never
           id?: string | null
-          is_admin_or_agent_result?: never
-          is_my_record?: never
-          is_super_admin_result?: never
           name?: string | null
           organization_id?: string | null
-          phone?: string | null
-          user_org?: never
         }
         Update: {
-          can_access_org_result?: never
+          access_level?: never
           created_by?: string | null
-          email?: never
           id?: string | null
-          is_admin_or_agent_result?: never
-          is_my_record?: never
-          is_super_admin_result?: never
           name?: string | null
           organization_id?: string | null
-          phone?: string | null
-          user_org?: never
         }
         Relationships: [
           {
             foreignKeyName: "buyers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_access_matrix: {
+        Row: {
+          access_level: string | null
+          can_see_all_orgs: boolean | null
+          can_see_contacts: boolean | null
+          can_see_financials: boolean | null
+          email: string | null
+          full_name: string | null
+          is_super_admin: boolean | null
+          organization_id: string | null
+          organization_role: string | null
+          total_buyers_in_org: number | null
+          total_leads_in_org: number | null
+          total_users_in_org: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1697,6 +1741,16 @@ export type Database = {
       }
     }
     Functions: {
+      apply_universal_privacy: {
+        Args: {
+          p_id_column?: string
+          p_org_column?: string
+          p_table_name: string
+          p_table_schema: string
+        }
+        Returns: string
+      }
+      assign_orgs_safely: { Args: never; Returns: undefined }
       can_access_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -1708,6 +1762,34 @@ export type Database = {
       can_view_user_email: {
         Args: { viewed_user_id: string; viewer_id: string }
         Returns: boolean
+      }
+      compare_user_views: {
+        Args: { user1_email: string; user2_email: string }
+        Returns: {
+          difference: number
+          table_name: string
+          user1_access: string
+          user1_count: number
+          user2_access: string
+          user2_count: number
+        }[]
+      }
+      generate_access_report: {
+        Args: never
+        Returns: {
+          access_level: string
+          buyers_count: number
+          can_see_contact_data: boolean
+          can_see_financial_data: boolean
+          conversations_count: number
+          full_name: string
+          is_super_admin: boolean
+          organization_role: string
+          profiles_count: number
+          seller_leads_count: number
+          user_email: string
+          user_organization_id: string
+        }[]
       }
       get_dashboard_with_logging: {
         Args: never
@@ -1725,6 +1807,7 @@ export type Database = {
           metric_value: string
         }[]
       }
+      get_user_access_level: { Args: never; Returns: string }
       get_user_org:
         | { Args: never; Returns: string }
         | { Args: { _user_id: string }; Returns: string }
@@ -1746,6 +1829,10 @@ export type Database = {
       is_super_admin:
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
+      is_team_member: {
+        Args: { resource_id: string; resource_type: string }
+        Returns: boolean
+      }
       is_tenant_admin_for_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -1755,8 +1842,40 @@ export type Database = {
       safe_query_param: { Args: { param: string }; Returns: string }
       safe_user_count: { Args: never; Returns: number }
       sanitize_text: { Args: { input: string }; Returns: string }
+      set_test_user: { Args: { user_uuid?: string }; Returns: string }
+      test_user_access: {
+        Args: { user_email: string }
+        Returns: {
+          access_level: string
+          has_contact_data: boolean
+          has_financial_data: boolean
+          record_count: number
+          table_name: string
+        }[]
+      }
+      test_user_access_simple: {
+        Args: { user_email: string }
+        Returns: {
+          details: string
+          test_result: string
+        }[]
+      }
       validate_email: { Args: { email: string }; Returns: boolean }
       validate_phone: { Args: { phone: string }; Returns: boolean }
+      view_as_user: {
+        Args: { table_to_view?: string; user_email: string }
+        Returns: Json[]
+      }
+      view_as_user_simple: {
+        Args: { user_email: string }
+        Returns: {
+          has_contact_data: boolean
+          has_financial_data: boolean
+          record_count: number
+          sample_record: Json
+          table_name: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin"
