@@ -148,11 +148,32 @@ Deno.serve(async (req) => {
 
             if (convError && convError.code === "PGRST116") {
               // Conversation doesn't exist, create one
+              // Extract organization_id from URL query parameter
+              const orgId = url.searchParams.get("org_id");
+              
+              if (!orgId) {
+                console.error("Missing org_id parameter - cannot create conversation without organization context");
+                continue;
+              }
+              
+              // Validate organization exists
+              const { data: org, error: orgError } = await supabase
+                .from("organizations")
+                .select("id")
+                .eq("id", orgId)
+                .single();
+              
+              if (orgError || !org) {
+                console.error("Invalid org_id - organization not found");
+                continue;
+              }
+              
               const { data: newConv, error: createError } = await supabase
                 .from("messenger_conversations")
                 .insert({
                   facebook_user_id: senderId,
                   facebook_user_name: event.sender?.name || "Facebook User",
+                  organization_id: orgId,
                   status: "active",
                   last_message_at: new Date().toISOString(),
                 })

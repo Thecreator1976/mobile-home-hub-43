@@ -50,7 +50,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, organization_id, organization_name, role }: InvitationRequest = await req.json();
 
-    console.log("Creating invitation for:", email, "to org:", organization_name, "as role:", role);
+    // Log invitation request (without exposing email for privacy)
+    console.log("Creating invitation for org:", organization_name, "as role:", role);
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -110,7 +111,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Invitation created with token:", invitation.token);
+    // Log invitation created (without exposing the token for security)
+    console.log("Invitation created:", { id: invitation.id, role: invitation.role });
 
     // Build the invitation URL
     const appUrl = req.headers.get("origin") || "https://mobilehomecrm.lovable.app";
@@ -189,7 +191,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Invitation email sent successfully to:", email);
+    console.log("Invitation email sent successfully");
 
     return new Response(
       JSON.stringify({ 
