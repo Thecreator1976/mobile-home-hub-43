@@ -1,5 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
+import {
+  validateString,
+  validateEnum,
+  validateUUID,
+  validateUrl,
+  validateFields,
+  validationErrorResponse,
+  MAX_LENGTHS,
+} from "../_shared/validation.ts";
 
 interface SendMessageRequest {
   conversationId: string;
@@ -9,8 +18,50 @@ interface SendMessageRequest {
   templateText?: string;
 }
 
+function validateSendMessageRequest(data: unknown): { valid: boolean; errors: string[]; sanitized?: SendMessageRequest } {
+  if (!data || typeof data !== "object") {
+    return { valid: false, errors: ["Request body is required"] };
+  }
+
+  const req = data as Record<string, unknown>;
+
+  const validation = validateFields([
+    { result: validateUUID(req.conversationId, "Conversation ID", true), field: "conversationId" },
+    { result: validateEnum(req.messageType, "Message type", ["text", "button_template"] as const, true), field: "messageType" },
+    { result: validateString(req.content, "Content", { maxLength: MAX_LENGTHS.content }), field: "content" },
+    { result: validateUrl(req.buyerListUrl), field: "buyerListUrl" },
+    { result: validateString(req.templateText, "Template text", { maxLength: MAX_LENGTHS.templateText }), field: "templateText" },
+  ]);
+
+  if (!validation.valid) {
+    return { valid: false, errors: validation.errors };
+  }
+
+  const messageType = validation.sanitized.messageType as "text" | "button_template";
+  
+  // Additional validation based on message type
+  if (messageType === "text" && !validation.sanitized.content) {
+    return { valid: false, errors: ["Content is required for text messages"] };
+  }
+
+  if (messageType === "button_template" && !validation.sanitized.buyerListUrl) {
+    return { valid: false, errors: ["Buyer list URL is required for button template messages"] };
+  }
+
+  return {
+    valid: true,
+    errors: [],
+    sanitized: {
+      conversationId: validation.sanitized.conversationId as string,
+      messageType,
+      content: validation.sanitized.content as string | undefined,
+      buyerListUrl: validation.sanitized.buyerListUrl as string | undefined,
+      templateText: validation.sanitized.templateText as string | undefined,
+    },
+  };
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,7 +71,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Require authentication
     const { userId } = await requireAuth(req);
     console.log("Authenticated user:", userId);
 
@@ -35,22 +85,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body: SendMessageRequest = await req.json();
-    const { conversationId, messageType, content, buyerListUrl, templateText } = body;
+    const rawData = await req.json();
+    const validation = validateSendMessageRequest(rawData);
 
-    if (!conversationId) {
-      return new Response(
-        JSON.stringify({ error: "conversationId is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!validation.valid || !validation.sanitized) {
+      console.error("Validation errors:", validation.errors);
+      return validationErrorResponse(validation.errors, corsHeaders);
     }
 
-    // Initialize Supabase client
+    const { conversationId, messageType, content, buyerListUrl, templateText } = validation.sanitized;
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get conversation to find the PSID
     const { data: conversation, error: convError } = await supabase
       .from("messenger_conversations")
       .select("*")
@@ -67,13 +115,11 @@ Deno.serve(async (req) => {
 
     const psid = conversation.facebook_user_id;
 
-    // Build the message payload
     let messagePayload: Record<string, unknown>;
     let storedContent: string;
     let storedMessageType: string;
 
     if (messageType === "button_template" && buyerListUrl) {
-      // Button template message for Buyer List Link
       const buttonText = templateText || "Thanks for your interest! This mobile home has just gone under contract. Would you like to join our VIP Buyer List to get alerts for new sales?";
       
       messagePayload = {
@@ -99,26 +145,17 @@ Deno.serve(async (req) => {
       storedContent = `[Buyer List Link] ${buttonText}`;
       storedMessageType = "button_template";
     } else {
-      // Plain text message
-      if (!content) {
-        return new Response(
-          JSON.stringify({ error: "content is required for text messages" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
       messagePayload = {
         recipient: { id: psid },
         messaging_type: "RESPONSE",
         message: { text: content },
       };
-      storedContent = content;
+      storedContent = content!;
       storedMessageType = "text";
     }
 
-    console.log("Sending message to Facebook:", JSON.stringify(messagePayload, null, 2));
+    console.log("Sending message to Facebook");
 
-    // Send message via Facebook Graph API
     const fbResponse = await fetch(
       `https://graph.facebook.com/v19.0/${pageId}/messages?access_token=${pageAccessToken}`,
       {
@@ -140,7 +177,6 @@ Deno.serve(async (req) => {
 
     console.log("Facebook API response:", fbResult);
 
-    // Store the outbound message in database
     const { error: msgError } = await supabase
       .from("messenger_messages")
       .insert({
@@ -163,7 +199,6 @@ Deno.serve(async (req) => {
     console.error("Send message error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
-    // Handle authentication errors
     if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
       return unauthorizedResponse(errorMessage);
     }
