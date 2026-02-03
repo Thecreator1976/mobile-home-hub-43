@@ -1,9 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
 
 interface SendMessageRequest {
   conversationId: string;
@@ -24,6 +20,10 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Require authentication
+    const { userId } = await requireAuth(req);
+    console.log("Authenticated user:", userId);
+
     const pageAccessToken = Deno.env.get("FACEBOOK_PAGE_ACCESS_TOKEN");
     const pageId = Deno.env.get("FACEBOOK_PAGE_ID");
 
@@ -162,6 +162,12 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error("Send message error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    
+    // Handle authentication errors
+    if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
+      return unauthorizedResponse(errorMessage);
+    }
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }

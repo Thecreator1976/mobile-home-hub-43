@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
 
 interface ContractRequest {
   leadData: {
@@ -107,6 +103,10 @@ serve(async (req) => {
   }
 
   try {
+    // Require authentication
+    const { userId } = await requireAuth(req);
+    console.log("Authenticated user:", userId);
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
@@ -290,6 +290,12 @@ Please generate a complete, professional contract document.`;
   } catch (error: unknown) {
     console.error("Error generating contract:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    
+    // Handle authentication errors
+    if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
+      return unauthorizedResponse(errorMessage);
+    }
+    
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
