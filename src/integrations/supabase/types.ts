@@ -78,6 +78,20 @@ export type Database = {
             foreignKeyName: "appointments_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
+            referencedRelation: "buyers_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers_viewer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
             referencedRelation: "secure_buyers"
             referencedColumns: ["id"]
           },
@@ -107,6 +121,13 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
             referencedColumns: ["id"]
           },
         ]
@@ -397,6 +418,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "contracts_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "contracts_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
@@ -495,6 +523,13 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
             referencedColumns: ["id"]
           },
         ]
@@ -623,6 +658,13 @@ export type Database = {
             referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lead_timeline_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
+            referencedColumns: ["id"]
+          },
         ]
       }
       messenger_conversations: {
@@ -680,6 +722,20 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
+            referencedRelation: "buyers_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers_viewer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
             referencedRelation: "secure_buyers"
             referencedColumns: ["id"]
           },
@@ -709,6 +765,13 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
             referencedColumns: ["id"]
           },
         ]
@@ -914,6 +977,13 @@ export type Database = {
             referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "personal_advances_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profile_access_audit: {
@@ -1074,6 +1144,13 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
             referencedColumns: ["id"]
           },
         ]
@@ -1286,6 +1363,13 @@ export type Database = {
             referencedRelation: "secure_seller_leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "social_posts_queue_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -1354,6 +1438,99 @@ export type Database = {
           category: string | null
           metric: string | null
           value: string | null
+        }
+        Relationships: []
+      }
+      buyers_masked: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          credit_score: number | null
+          email: string | null
+          home_types: Database["public"]["Enums"]["home_type"][] | null
+          id: string | null
+          locations: string[] | null
+          max_price: number | null
+          min_price: number | null
+          name: string | null
+          notes: string | null
+          org_id: string | null
+          organization_id: string | null
+          phone: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          credit_score?: number | null
+          email?: never
+          home_types?: Database["public"]["Enums"]["home_type"][] | null
+          id?: string | null
+          locations?: string[] | null
+          max_price?: number | null
+          min_price?: number | null
+          name?: string | null
+          notes?: string | null
+          org_id?: string | null
+          organization_id?: string | null
+          phone?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          credit_score?: number | null
+          email?: never
+          home_types?: Database["public"]["Enums"]["home_type"][] | null
+          id?: string | null
+          locations?: string[] | null
+          max_price?: number | null
+          min_price?: number | null
+          name?: string | null
+          notes?: string | null
+          org_id?: string | null
+          organization_id?: string | null
+          phone?: never
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buyers_org_fk"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "buyers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      buyers_viewer: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          phone: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          phone?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          phone?: string | null
         }
         Relationships: []
       }
@@ -1428,6 +1605,62 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles_masked: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_paid: boolean | null
+          is_super_admin: boolean | null
+          organization_id: string | null
+          status: string | null
+          subscription_expires_at: string | null
+          subscription_tier: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          is_paid?: boolean | null
+          is_super_admin?: never
+          organization_id?: string | null
+          status?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: never
+          full_name?: string | null
+          id?: string | null
+          is_paid?: boolean | null
+          is_super_admin?: never
+          organization_id?: string | null
+          status?: string | null
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_based_dashboard: {
         Row: {
           dashboard_section: string | null
@@ -1492,6 +1725,20 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
+            referencedRelation: "buyers_masked"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "buyers_viewer"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
             referencedRelation: "secure_buyers"
             referencedColumns: ["id"]
           },
@@ -1514,6 +1761,13 @@ export type Database = {
             columns: ["seller_lead_id"]
             isOneToOne: false
             referencedRelation: "secure_seller_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messenger_conversations_seller_lead_id_fkey"
+            columns: ["seller_lead_id"]
+            isOneToOne: false
+            referencedRelation: "secure_seller_leads_viewer"
             referencedColumns: ["id"]
           },
         ]
@@ -1569,10 +1823,102 @@ export type Database = {
           status: Database["public"]["Enums"]["lead_status"] | null
           target_offer: number | null
           updated_at: string | null
-          user_access_level: string | null
           width_ft: number | null
           year_built: number | null
           zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          asking_price?: number | null
+          city?: string | null
+          condition?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          estimated_value?: number | null
+          home_type?: Database["public"]["Enums"]["home_type"] | null
+          id?: string | null
+          length_ft?: number | null
+          lot_rent?: number | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          owed_amount?: number | null
+          park_owned?: boolean | null
+          phone?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          target_offer?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+          year_built?: number | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          asking_price?: number | null
+          city?: string | null
+          condition?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          estimated_value?: number | null
+          home_type?: Database["public"]["Enums"]["home_type"] | null
+          id?: string | null
+          length_ft?: number | null
+          lot_rent?: number | null
+          name?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          owed_amount?: number | null
+          park_owned?: boolean | null
+          phone?: string | null
+          state?: string | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          target_offer?: number | null
+          updated_at?: string | null
+          width_ft?: number | null
+          year_built?: number | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
+      secure_seller_leads_viewer: {
+        Row: {
+          condition: number | null
+          created_at: string | null
+          home_type: Database["public"]["Enums"]["home_type"] | null
+          id: string | null
+          length_ft: number | null
+          name: string | null
+          park_owned: boolean | null
+          status: Database["public"]["Enums"]["lead_status"] | null
+          width_ft: number | null
+          year_built: number | null
+        }
+        Insert: {
+          condition?: number | null
+          created_at?: string | null
+          home_type?: Database["public"]["Enums"]["home_type"] | null
+          id?: string | null
+          length_ft?: number | null
+          name?: string | null
+          park_owned?: boolean | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          width_ft?: number | null
+          year_built?: number | null
+        }
+        Update: {
+          condition?: number | null
+          created_at?: string | null
+          home_type?: Database["public"]["Enums"]["home_type"] | null
+          id?: string | null
+          length_ft?: number | null
+          name?: string | null
+          park_owned?: boolean | null
+          status?: Database["public"]["Enums"]["lead_status"] | null
+          width_ft?: number | null
+          year_built?: number | null
         }
         Relationships: []
       }
