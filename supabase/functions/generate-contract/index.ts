@@ -1,5 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
+import {
+  validateString,
+  validateNumber,
+  validateEmail,
+  validateEnum,
+  validateFields,
+  validationErrorResponse,
+  MAX_LENGTHS,
+} from "../_shared/validation.ts";
 
 interface ContractRequest {
   leadData: {
@@ -32,12 +41,124 @@ interface ContractRequest {
   templateId?: string;
   customizationNotes?: string;
   contractType: "purchase_agreement" | "option_agreement" | "assignment";
-  // Legacy fields for backwards compatibility
   buyerName?: string;
   buyerAddress?: string;
 }
 
-// Standard placeholders to replace in templates
+// Validate and sanitize the contract request
+function validateContractRequest(data: unknown): { valid: boolean; errors: string[]; sanitized?: ContractRequest } {
+  if (!data || typeof data !== "object") {
+    return { valid: false, errors: ["Request body is required"] };
+  }
+
+  const req = data as Record<string, unknown>;
+  const errors: string[] = [];
+
+  if (!req.leadData || typeof req.leadData !== "object") {
+    return { valid: false, errors: ["leadData is required"] };
+  }
+
+  const lead = req.leadData as Record<string, unknown>;
+  const offer = (req.offerData as Record<string, unknown>) || {};
+
+  const leadValidations = validateFields([
+    { result: validateString(lead.name, "Seller name", { required: true, maxLength: MAX_LENGTHS.name }), field: "name" },
+    { result: validateString(lead.phone, "Phone", { maxLength: MAX_LENGTHS.phone }), field: "phone" },
+    { result: validateEmail(lead.email), field: "email" },
+    { result: validateString(lead.address, "Address", { required: true, maxLength: MAX_LENGTHS.address }), field: "address" },
+    { result: validateString(lead.city, "City", { maxLength: 100 }), field: "city" },
+    { result: validateString(lead.state, "State", { maxLength: 50 }), field: "state" },
+    { result: validateString(lead.zip, "ZIP", { maxLength: 20 }), field: "zip" },
+    { result: validateString(lead.home_type, "Home type", { maxLength: 50 }), field: "home_type" },
+    { result: validateNumber(lead.year_built, "Year built", { min: 1900, max: new Date().getFullYear() + 1, integer: true }), field: "year_built" },
+    { result: validateNumber(lead.asking_price, "Asking price", { required: true, min: 0, max: 100000000 }), field: "asking_price" },
+    { result: validateNumber(lead.target_offer, "Target offer", { required: true, min: 0, max: 100000000 }), field: "target_offer" },
+    { result: validateNumber(lead.lot_rent, "Lot rent", { min: 0, max: 10000 }), field: "lot_rent" },
+    { result: validateNumber(lead.condition, "Condition", { min: 1, max: 10, integer: true }), field: "condition" },
+    { result: validateString(lead.notes, "Notes", { maxLength: MAX_LENGTHS.notes, sanitizeForAI: true }), field: "notes" },
+  ]);
+
+  if (!leadValidations.valid) {
+    errors.push(...leadValidations.errors);
+  }
+
+  const offerValidations = validateFields([
+    { result: validateNumber(offer.purchasePrice, "Purchase price", { min: 0, max: 100000000 }), field: "purchasePrice" },
+    { result: validateNumber(offer.earnestMoney, "Earnest money", { min: 0, max: 10000000 }), field: "earnestMoney" },
+    { result: validateString(offer.closingDate, "Closing date", { maxLength: 50 }), field: "closingDate" },
+    { result: validateString(offer.financing, "Financing", { maxLength: 100 }), field: "financing" },
+    { result: validateNumber(offer.inspectionPeriod, "Inspection period", { min: 0, max: 365, integer: true }), field: "inspectionPeriod" },
+    { result: validateString(offer.specialTerms, "Special terms", { maxLength: MAX_LENGTHS.specialTerms, sanitizeForAI: true }), field: "specialTerms" },
+    { result: validateString(offer.buyerName, "Buyer name", { maxLength: MAX_LENGTHS.name }), field: "buyerName" },
+    { result: validateString(offer.buyerAddress, "Buyer address", { maxLength: MAX_LENGTHS.address }), field: "buyerAddress" },
+  ]);
+
+  if (!offerValidations.valid) {
+    errors.push(...offerValidations.errors);
+  }
+
+  const contractTypeResult = validateEnum(
+    req.contractType,
+    "Contract type",
+    ["purchase_agreement", "option_agreement", "assignment"] as const,
+    true
+  );
+  if (!contractTypeResult.valid) {
+    errors.push(contractTypeResult.error!);
+  }
+
+  const templateContentResult = validateString(req.templateContent, "Template content", { maxLength: 50000 });
+  if (!templateContentResult.valid) {
+    errors.push(templateContentResult.error!);
+  }
+
+  const customizationNotesResult = validateString(req.customizationNotes, "Customization notes", { 
+    maxLength: MAX_LENGTHS.notes, 
+    sanitizeForAI: true 
+  });
+  if (!customizationNotesResult.valid) {
+    errors.push(customizationNotesResult.error!);
+  }
+
+  if (errors.length > 0) {
+    return { valid: false, errors };
+  }
+
+  const sanitized: ContractRequest = {
+    leadData: {
+      name: leadValidations.sanitized.name as string,
+      phone: leadValidations.sanitized.phone as string | undefined,
+      email: leadValidations.sanitized.email as string | undefined,
+      address: leadValidations.sanitized.address as string,
+      city: leadValidations.sanitized.city as string | undefined,
+      state: leadValidations.sanitized.state as string | undefined,
+      zip: leadValidations.sanitized.zip as string | undefined,
+      home_type: (leadValidations.sanitized.home_type as string) || "single",
+      year_built: leadValidations.sanitized.year_built as number | undefined,
+      asking_price: leadValidations.sanitized.asking_price as number,
+      target_offer: leadValidations.sanitized.target_offer as number,
+      lot_rent: leadValidations.sanitized.lot_rent as number | undefined,
+      condition: leadValidations.sanitized.condition as number | undefined,
+      notes: leadValidations.sanitized.notes as string | undefined,
+    },
+    offerData: {
+      purchasePrice: (offerValidations.sanitized.purchasePrice as number) || (leadValidations.sanitized.target_offer as number),
+      earnestMoney: (offerValidations.sanitized.earnestMoney as number) || Math.round((leadValidations.sanitized.target_offer as number) * 0.01),
+      closingDate: (offerValidations.sanitized.closingDate as string) || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      financing: (offerValidations.sanitized.financing as string) || "cash",
+      inspectionPeriod: (offerValidations.sanitized.inspectionPeriod as number) || 10,
+      specialTerms: offerValidations.sanitized.specialTerms as string | undefined,
+      buyerName: (offerValidations.sanitized.buyerName as string) || (req.buyerName as string),
+      buyerAddress: (offerValidations.sanitized.buyerAddress as string) || (req.buyerAddress as string),
+    },
+    templateContent: templateContentResult.sanitized as string | undefined,
+    customizationNotes: customizationNotesResult.sanitized as string | undefined,
+    contractType: contractTypeResult.sanitized as "purchase_agreement" | "option_agreement" | "assignment",
+  };
+
+  return { valid: true, errors: [], sanitized };
+}
+
 const replacePlaceholders = (
   template: string,
   leadData: ContractRequest["leadData"],
@@ -97,13 +218,11 @@ const replacePlaceholders = (
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Require authentication
     const { userId } = await requireAuth(req);
     console.log("Authenticated user:", userId);
 
@@ -112,39 +231,23 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const requestData: ContractRequest = await req.json();
-    const {
-      leadData,
-      offerData,
-      templateContent,
-      customizationNotes,
-      contractType,
-      buyerName,
-      buyerAddress,
-    } = requestData;
+    const rawData = await req.json();
+    const validation = validateContractRequest(rawData);
+    
+    if (!validation.valid || !validation.sanitized) {
+      console.error("Validation errors:", validation.errors);
+      return validationErrorResponse(validation.errors, corsHeaders);
+    }
 
-    // Build offerData from legacy fields if not provided
-    const finalOfferData = offerData || {
-      purchasePrice: leadData.target_offer,
-      earnestMoney: Math.round(leadData.target_offer * 0.01),
-      closingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      financing: "cash",
-      inspectionPeriod: 10,
-      buyerName: buyerName,
-      buyerAddress: buyerAddress,
-    };
+    const { leadData, offerData, templateContent, customizationNotes, contractType } = validation.sanitized;
 
     console.log("Generating contract for:", leadData.name, "Type:", contractType);
-    console.log("Using template:", templateContent ? "Yes" : "No (from scratch)");
-    console.log("Customization notes:", customizationNotes ? "Yes" : "No");
 
     let systemPrompt: string;
     let userPrompt: string;
 
     if (templateContent) {
-      // TEMPLATE-BASED GENERATION MODE
-      // First, replace standard placeholders
-      const filledTemplate = replacePlaceholders(templateContent, leadData, finalOfferData);
+      const filledTemplate = replacePlaceholders(templateContent, leadData, offerData);
 
       systemPrompt = `You are a legal document assistant specializing in mobile home real estate transactions.
 
@@ -176,24 +279,23 @@ LEAD/PROPERTY DATA:
 - Lot Rent: ${leadData.lot_rent ? `$${leadData.lot_rent}/month` : "N/A"}
 
 OFFER DATA:
-- Purchase Price: $${finalOfferData.purchasePrice.toLocaleString()}
-- Earnest Money: $${finalOfferData.earnestMoney.toLocaleString()}
-- Closing Date: ${finalOfferData.closingDate}
-- Financing: ${finalOfferData.financing}
-- Inspection Period: ${finalOfferData.inspectionPeriod} days
-- Buyer Name: ${finalOfferData.buyerName || "[To be filled]"}
+- Purchase Price: $${offerData.purchasePrice.toLocaleString()}
+- Earnest Money: $${offerData.earnestMoney.toLocaleString()}
+- Closing Date: ${offerData.closingDate}
+- Financing: ${offerData.financing}
+- Inspection Period: ${offerData.inspectionPeriod} days
+- Buyer Name: ${offerData.buyerName || "[To be filled]"}
 
-${customizationNotes ? `CUSTOMIZATION INSTRUCTIONS (from lead notes):
+${customizationNotes ? `CUSTOMIZATION INSTRUCTIONS:
 ${customizationNotes}
 
 Please apply these specific modifications to the template while preserving its structure.` : "No specific customizations requested. Please ensure the template is complete and professional."}
 
-${finalOfferData.specialTerms ? `ADDITIONAL SPECIAL TERMS:
-${finalOfferData.specialTerms}` : ""}
+${offerData.specialTerms ? `ADDITIONAL SPECIAL TERMS:
+${offerData.specialTerms}` : ""}
 
 Generate the final contract document based on my template and the above information.`;
     } else {
-      // LEGACY FROM-SCRATCH GENERATION MODE
       const contractTypeDescriptions = {
         purchase_agreement: "a standard purchase agreement for buying a mobile home",
         option_agreement: "an option to purchase agreement that gives the buyer the right but not obligation to purchase",
@@ -216,18 +318,18 @@ SELLER INFORMATION:
 - Year Built: ${leadData.year_built || "Unknown"}
 
 FINANCIAL TERMS:
-- Purchase Price: $${finalOfferData.purchasePrice.toLocaleString()}
-- Earnest Money Deposit: $${finalOfferData.earnestMoney.toLocaleString()}
-- Closing Date: ${finalOfferData.closingDate}
-- Financing Type: ${finalOfferData.financing}
-- Inspection Period: ${finalOfferData.inspectionPeriod} days
+- Purchase Price: $${offerData.purchasePrice.toLocaleString()}
+- Earnest Money Deposit: $${offerData.earnestMoney.toLocaleString()}
+- Closing Date: ${offerData.closingDate}
+- Financing Type: ${offerData.financing}
+- Inspection Period: ${offerData.inspectionPeriod} days
 
-${finalOfferData.buyerName ? `BUYER INFORMATION:
-- Name: ${finalOfferData.buyerName}
-- Address: ${finalOfferData.buyerAddress || "To be provided"}` : "BUYER: [Buyer Name to be filled in]"}
+${offerData.buyerName ? `BUYER INFORMATION:
+- Name: ${offerData.buyerName}
+- Address: ${offerData.buyerAddress || "To be provided"}` : "BUYER: [Buyer Name to be filled in]"}
 
-${finalOfferData.specialTerms ? `SPECIAL TERMS:
-${finalOfferData.specialTerms}` : ""}
+${offerData.specialTerms ? `SPECIAL TERMS:
+${offerData.specialTerms}` : ""}
 
 Please generate a complete, professional contract document.`;
     }
@@ -291,7 +393,6 @@ Please generate a complete, professional contract document.`;
     console.error("Error generating contract:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
     
-    // Handle authentication errors
     if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
       return unauthorizedResponse(errorMessage);
     }

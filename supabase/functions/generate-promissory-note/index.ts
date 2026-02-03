@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
+import {
+  validateString,
+  validateNumber,
+  validateFields,
+  validationErrorResponse,
+  MAX_LENGTHS,
+} from "../_shared/validation.ts";
 
 interface PromissoryNoteRequest {
   borrowerName: string;
@@ -11,25 +18,60 @@ interface PromissoryNoteRequest {
   dueDate?: string;
 }
 
+function validatePromissoryNoteRequest(data: unknown): { valid: boolean; errors: string[]; sanitized?: PromissoryNoteRequest } {
+  if (!data || typeof data !== "object") {
+    return { valid: false, errors: ["Request body is required"] };
+  }
+
+  const req = data as Record<string, unknown>;
+
+  const validation = validateFields([
+    { result: validateString(req.borrowerName, "Borrower name", { required: true, maxLength: MAX_LENGTHS.name }), field: "borrowerName" },
+    { result: validateString(req.lenderName, "Lender name", { required: true, maxLength: MAX_LENGTHS.name }), field: "lenderName" },
+    { result: validateNumber(req.amount, "Amount", { required: true, min: 0.01, max: 100000000 }), field: "amount" },
+    { result: validateNumber(req.interestRate, "Interest rate", { required: true, min: 0, max: 100 }), field: "interestRate" },
+    { result: validateString(req.repaymentTerms, "Repayment terms", { maxLength: 2000 }), field: "repaymentTerms" },
+    { result: validateString(req.issuedDate, "Issued date", { required: true, maxLength: 50 }), field: "issuedDate" },
+    { result: validateString(req.dueDate, "Due date", { maxLength: 50 }), field: "dueDate" },
+  ]);
+
+  if (!validation.valid) {
+    return { valid: false, errors: validation.errors };
+  }
+
+  return {
+    valid: true,
+    errors: [],
+    sanitized: {
+      borrowerName: validation.sanitized.borrowerName as string,
+      lenderName: validation.sanitized.lenderName as string,
+      amount: validation.sanitized.amount as number,
+      interestRate: validation.sanitized.interestRate as number,
+      repaymentTerms: (validation.sanitized.repaymentTerms as string) || "Payment shall be made in full upon maturity or upon demand by the Lender.",
+      issuedDate: validation.sanitized.issuedDate as string,
+      dueDate: validation.sanitized.dueDate as string | undefined,
+    },
+  };
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Require authentication
     const { userId } = await requireAuth(req);
     console.log("Authenticated user:", userId);
 
-    const { borrowerName, lenderName, amount, interestRate, repaymentTerms, issuedDate, dueDate }: PromissoryNoteRequest = await req.json();
+    const rawData = await req.json();
+    const validation = validatePromissoryNoteRequest(rawData);
 
-    if (!borrowerName || !amount) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!validation.valid || !validation.sanitized) {
+      console.error("Validation errors:", validation.errors);
+      return validationErrorResponse(validation.errors, corsHeaders);
     }
+
+    const { borrowerName, lenderName, amount, interestRate, repaymentTerms, issuedDate, dueDate } = validation.sanitized;
 
     const formatCurrency = (amt: number) => {
       return new Intl.NumberFormat('en-US', {
@@ -68,7 +110,7 @@ DATE OF NOTE: ${formatDate(issuedDate)}
 ${dueDate ? `MATURITY DATE: ${formatDate(dueDate)}` : 'MATURITY DATE: Upon Demand'}
 
 REPAYMENT TERMS:
-${repaymentTerms || 'Payment shall be made in full upon maturity or upon demand by the Lender.'}
+${repaymentTerms}
 
 ================================================================================
                               TERMS AND CONDITIONS
@@ -170,7 +212,6 @@ This document was generated on ${new Date().toLocaleDateString('en-US', {
     console.error('Error generating promissory note:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     
-    // Handle authentication errors
     if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
       return unauthorizedResponse(errorMessage);
     }
@@ -192,36 +233,35 @@ function numberToWords(num: number): string {
 
   const intPart = Math.floor(num);
   let words = '';
+  let remaining = intPart;
 
-  if (intPart >= 1000000) {
-    words += numberToWords(Math.floor(intPart / 1000000)) + ' Million ';
-    num = intPart % 1000000;
+  if (remaining >= 1000000) {
+    words += numberToWords(Math.floor(remaining / 1000000)) + ' Million ';
+    remaining = remaining % 1000000;
   }
 
-  if (intPart >= 1000) {
-    words += numberToWords(Math.floor((intPart % 1000000) / 1000)) + ' Thousand ';
-    num = intPart % 1000;
-  } else {
-    num = intPart;
+  if (remaining >= 1000) {
+    words += numberToWords(Math.floor(remaining / 1000)) + ' Thousand ';
+    remaining = remaining % 1000;
   }
 
-  if (num >= 100) {
-    words += ones[Math.floor(num / 100)] + ' Hundred ';
-    num = num % 100;
+  if (remaining >= 100) {
+    words += ones[Math.floor(remaining / 100)] + ' Hundred ';
+    remaining = remaining % 100;
   }
 
-  if (num >= 20) {
-    words += tens[Math.floor(num / 10)] + ' ';
-    num = num % 10;
+  if (remaining >= 20) {
+    words += tens[Math.floor(remaining / 10)] + ' ';
+    remaining = remaining % 10;
   }
 
-  if (num >= 10 && num < 20) {
-    words += teens[num - 10] + ' ';
-    num = 0;
+  if (remaining >= 10 && remaining < 20) {
+    words += teens[remaining - 10] + ' ';
+    remaining = 0;
   }
 
-  if (num > 0) {
-    words += ones[num] + ' ';
+  if (remaining > 0) {
+    words += ones[remaining] + ' ';
   }
 
   return words.trim();
