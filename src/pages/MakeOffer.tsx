@@ -174,7 +174,7 @@ export default function MakeOffer() {
     try {
       // Update lead status to offer_made
       const { error } = await supabase
-        .from("seller_leads")
+        .from("seller_leads" as any)
         .update({ 
           status: "offer_made",
           target_offer: offerData.purchasePrice,

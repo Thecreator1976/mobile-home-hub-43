@@ -20,19 +20,25 @@ interface ChartData {
   closed: number;
 }
 
+interface SellerLeadData {
+  created_at: string | null;
+  status: string | null;
+}
+
 export function DashboardChart() {
   const { user } = useAuth();
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-chart"],
     queryFn: async (): Promise<ChartData[]> => {
-      // Fetch all leads once
-      const { data: leads, error } = await supabase
-        .from("seller_leads")
+      // Fetch all leads using secure view
+      const { data: leadsData, error } = await supabase
+        .from("secure_seller_leads")
         .select("created_at, status");
 
       if (error) throw error;
 
+      const leads = (leadsData || []) as SellerLeadData[];
       const chartData: ChartData[] = [];
 
       // Process data for last 12 months
@@ -40,7 +46,8 @@ export function DashboardChart() {
         const monthStart = startOfMonth(subMonths(new Date(), i));
         const monthEnd = endOfMonth(subMonths(new Date(), i));
 
-        const monthLeads = (leads || []).filter((lead) => {
+        const monthLeads = leads.filter((lead) => {
+          if (!lead.created_at) return false;
           const createdAt = new Date(lead.created_at);
           return createdAt >= monthStart && createdAt <= monthEnd;
         });

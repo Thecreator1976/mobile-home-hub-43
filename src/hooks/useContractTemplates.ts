@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
 // Helper to get user's organization_id
 const getUserOrganizationId = async (userId: string): Promise<string | null> => {
@@ -22,6 +23,8 @@ export interface ContractTemplate {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  org_id: string;
+  organization_id: string | null;
 }
 
 export interface CreateTemplateInput {
@@ -34,6 +37,14 @@ export interface CreateTemplateInput {
 export function useContractTemplates() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  // Fetch user's organization ID
+  useEffect(() => {
+    if (user?.id) {
+      getUserOrganizationId(user.id).then(setUserOrgId);
+    }
+  }, [user?.id]);
 
   const { data: templates = [], isLoading, error } = useQuery({
     queryKey: ['contract-templates'],
@@ -44,7 +55,7 @@ export function useContractTemplates() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
-      return data as ContractTemplate[];
+      return data as unknown as ContractTemplate[];
     },
     enabled: !!user,
   });
@@ -53,7 +64,7 @@ export function useContractTemplates() {
     mutationFn: async (input: CreateTemplateInput) => {
       if (!user?.id) throw new Error('User not authenticated');
       
-      const organizationId = await getUserOrganizationId(user.id);
+      const organizationId = userOrgId || await getUserOrganizationId(user.id);
       if (!organizationId) throw new Error('User organization not found');
 
       const { data, error } = await supabase
@@ -61,6 +72,7 @@ export function useContractTemplates() {
         .insert({
           ...input,
           created_by: user.id,
+          org_id: organizationId,
           organization_id: organizationId,
         })
         .select()
@@ -88,9 +100,12 @@ export function useContractTemplates() {
 
   const updateTemplate = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ContractTemplate> & { id: string }) => {
+      // Remove org_id from updates to avoid changing it
+      const { org_id, organization_id, ...safeUpdates } = updates;
+      
       const { data, error } = await supabase
         .from('contract_templates')
-        .update(updates)
+        .update(safeUpdates)
         .eq('id', id)
         .select()
         .single();

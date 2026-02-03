@@ -154,9 +154,9 @@ export default function ContractDetail() {
     if (!contract?.seller_lead_id) return;
     setIsRegenerating(true);
     try {
-      // Fetch the lead data
+      // Fetch the lead data using secure view
       const { data: lead, error: leadError } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("*")
         .eq("id", contract.seller_lead_id)
         .single();

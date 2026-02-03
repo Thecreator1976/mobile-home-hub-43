@@ -130,7 +130,7 @@ export default function Contracts() {
     setRegeneratingId(contract.id);
     try {
       const { data: lead, error: leadError } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("*")
         .eq("id", contract.seller_lead_id)
         .single();

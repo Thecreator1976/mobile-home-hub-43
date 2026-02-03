@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { subDays, startOfMonth, endOfMonth, startOfDay, endOfDay } from "date-fns";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 
 export interface DashboardStats {
   totalRevenue: number;
@@ -15,6 +15,14 @@ export interface DashboardStats {
   leadsChange: number;
 }
 
+interface SellerLead {
+  id: string;
+  created_at: string | null;
+  status: string | null;
+  target_offer: number | null;
+  estimated_value: number | null;
+}
+
 export function useDashboardStats() {
   const { user } = useAuth();
 
@@ -25,12 +33,14 @@ export function useDashboardStats() {
       const thirtyDaysAgo = subDays(today, 30);
       const sixtyDaysAgo = subDays(today, 60);
 
-      // Fetch all leads
-      const { data: leads, error: leadsError } = await supabase
-        .from("seller_leads")
-        .select("*");
+      // Fetch all leads using secure view
+      const { data: leadsData, error: leadsError } = await supabase
+        .from("secure_seller_leads")
+        .select("id, created_at, status, target_offer, estimated_value");
 
       if (leadsError) throw leadsError;
+      
+      const leads = (leadsData || []) as SellerLead[];
 
       // Fetch active buyers
       const { data: buyers, error: buyersError } = await supabase
@@ -53,12 +63,12 @@ export function useDashboardStats() {
       if (apptsError) throw apptsError;
 
       // Calculate stats
-      const allLeads = leads || [];
+      const allLeads = leads;
       const newLeadsThisMonth = allLeads.filter(
-        (lead) => new Date(lead.created_at) >= thirtyDaysAgo
+        (lead) => lead.created_at && new Date(lead.created_at) >= thirtyDaysAgo
       );
       const newLeadsLastMonth = allLeads.filter(
-        (lead) => 
+        (lead) => lead.created_at && 
           new Date(lead.created_at) >= sixtyDaysAgo && 
           new Date(lead.created_at) < thirtyDaysAgo
       );
@@ -108,7 +118,7 @@ export function usePipelineData() {
     queryKey: ["pipeline-data"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("status");
 
       if (error) throw error;
