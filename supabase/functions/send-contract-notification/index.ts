@@ -1,11 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
 
 interface NotificationRequest {
   contract_id: string;
@@ -20,6 +16,10 @@ serve(async (req) => {
   }
 
   try {
+    // Require authentication
+    const { userId } = await requireAuth(req);
+    console.log("Authenticated user:", userId);
+
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       console.error("RESEND_API_KEY not configured");
@@ -32,7 +32,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { contract_id, event, recipient_email }: NotificationRequest = await req.json();
-    console.log(`Processing contract notification: ${event} for contract ${contract_id}`);
+    console.log(`Processing contract notification: ${event}`);
 
     // Fetch contract details with lead info
     const { data: contract, error: contractError } = await supabase
@@ -157,8 +157,15 @@ serve(async (req) => {
     });
   } catch (error: any) {
     console.error("Error in send-contract-notification:", error);
+    const errorMessage = error?.message || "Unknown error";
+    
+    // Handle authentication errors
+    if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
+      return unauthorizedResponse(errorMessage);
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

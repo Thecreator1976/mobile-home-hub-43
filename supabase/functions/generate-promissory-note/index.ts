@@ -1,9 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { requireAuth, corsHeaders, unauthorizedResponse } from "../_shared/auth.ts";
 
 interface PromissoryNoteRequest {
   borrowerName: string;
@@ -22,6 +18,10 @@ serve(async (req) => {
   }
 
   try {
+    // Require authentication
+    const { userId } = await requireAuth(req);
+    console.log("Authenticated user:", userId);
+
     const { borrowerName, lenderName, amount, interestRate, repaymentTerms, issuedDate, dueDate }: PromissoryNoteRequest = await req.json();
 
     if (!borrowerName || !amount) {
@@ -168,6 +168,13 @@ This document was generated on ${new Date().toLocaleDateString('en-US', {
     );
   } catch (error) {
     console.error('Error generating promissory note:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
+    // Handle authentication errors
+    if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {
+      return unauthorizedResponse(errorMessage);
+    }
+    
     return new Response(
       JSON.stringify({ error: 'Failed to generate promissory note' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
