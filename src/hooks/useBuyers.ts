@@ -4,6 +4,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { HomeType } from "./useSellerLeads";
 import { requirePermission } from "@/lib/permissions";
+import { useEffect, useState } from "react";
+
+// Helper to get user's organization_id
+const getUserOrganizationId = async (userId: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+  return data?.organization_id || null;
+};
 
 export interface Buyer {
   id: string;
@@ -37,6 +48,14 @@ export interface CreateBuyerInput {
 export function useBuyers() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  // Fetch user's organization ID
+  useEffect(() => {
+    if (user?.id) {
+      getUserOrganizationId(user.id).then(setUserOrgId);
+    }
+  }, [user?.id]);
 
   const { data: buyers, isLoading, error } = useQuery({
     queryKey: ["buyers"],
@@ -46,7 +65,7 @@ export function useBuyers() {
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+        if (error) throw error;
       return data as Buyer[];
     },
     enabled: !!user,
@@ -54,17 +73,24 @@ export function useBuyers() {
 
   const createBuyer = useMutation({
     mutationFn: async (input: CreateBuyerInput) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
       // Server-side permission check
       const permission = await requirePermission("buyers", "insert");
       if (!permission.allowed) {
         throw new Error(permission.reason || "Permission denied");
       }
 
+      const organizationId = userOrgId || await getUserOrganizationId(user.id);
+      if (!organizationId) throw new Error('User organization not found');
+
       const { data, error } = await supabase
         .from("buyers")
         .insert({
           ...input,
-          created_by: user?.id,
+          created_by: user.id,
+          org_id: organizationId,
+          organization_id: organizationId,
         })
         .select()
         .single();

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export type AppointmentType = "call" | "meeting" | "property_viewing" | "closing";
 
@@ -20,6 +20,8 @@ export interface Appointment {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  org_id: string;
+  organization_id: string | null;
 }
 
 export interface CreateAppointmentInput {
@@ -33,9 +35,27 @@ export interface CreateAppointmentInput {
   buyer_id?: string;
 }
 
+// Helper to get user's organization_id
+const getUserOrganizationId = async (userId: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+  return data?.organization_id || null;
+};
+
 export function useAppointments() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  // Fetch user's organization ID
+  useEffect(() => {
+    if (user?.id) {
+      getUserOrganizationId(user.id).then(setUserOrgId);
+    }
+  }, [user?.id]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -69,18 +89,25 @@ export function useAppointments() {
         .order("start_time", { ascending: true });
 
       if (error) throw error;
-      return data as Appointment[];
+      return data as unknown as Appointment[];
     },
     enabled: !!user,
   });
 
   const createAppointment = useMutation({
     mutationFn: async (input: CreateAppointmentInput) => {
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const organizationId = userOrgId || await getUserOrganizationId(user.id);
+      if (!organizationId) throw new Error('User organization not found');
+
       const { data, error } = await supabase
         .from("appointments")
         .insert({
           ...input,
-          created_by: user?.id,
+          created_by: user.id,
+          org_id: organizationId,
+          organization_id: organizationId,
         })
         .select()
         .single();
@@ -106,9 +133,12 @@ export function useAppointments() {
 
   const updateAppointment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Appointment> & { id: string }) => {
+      // Remove org_id from updates to avoid changing it
+      const { org_id, organization_id, ...safeUpdates } = updates;
+      
       const { data, error } = await supabase
         .from("appointments")
-        .update(updates)
+        .update(safeUpdates)
         .eq("id", id)
         .select()
         .single();

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { requirePermission } from "@/lib/permissions";
 
 export type LeadStatus = "new" | "contacted" | "offer_made" | "under_contract" | "closed" | "lost";
@@ -33,6 +33,8 @@ export interface SellerLead {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  org_id?: string;
+  organization_id?: string | null;
 }
 
 export interface CreateLeadInput {
@@ -57,6 +59,16 @@ export interface CreateLeadInput {
   notes?: string;
 }
 
+// Helper to get user's organization_id
+const getUserOrganizationId = async (userId: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+  return data?.organization_id || null;
+};
+
 // Helper to trigger webhooks via edge function
 async function triggerLeadWebhooks(event: string, lead: SellerLead, oldStatus?: string, newStatus?: string) {
   try {
@@ -76,6 +88,14 @@ async function triggerLeadWebhooks(event: string, lead: SellerLead, oldStatus?: 
 export function useSellerLeads() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  // Fetch user's organization ID
+  useEffect(() => {
+    if (user?.id) {
+      getUserOrganizationId(user.id).then(setUserOrgId);
+    }
+  }, [user?.id]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -103,36 +123,48 @@ export function useSellerLeads() {
   const { data: leads, isLoading, error } = useQuery({
     queryKey: ["seller-leads"],
     queryFn: async () => {
+      // Use the secure view for reading
       const { data, error } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as SellerLead[];
+      return data as unknown as SellerLead[];
     },
     enabled: !!user,
   });
 
   const createLead = useMutation({
     mutationFn: async (input: CreateLeadInput) => {
-      // Server-side permission check
-      const permission = await requirePermission("seller_leads", "insert");
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      // Server-side permission check - cast table name to bypass type checking
+      const permission = await requirePermission("seller_leads" as any, "insert");
       if (!permission.allowed) {
         throw new Error(permission.reason || "Permission denied");
       }
 
+      const organizationId = userOrgId || await getUserOrganizationId(user.id);
+      if (!organizationId) throw new Error('User organization not found');
+
+      // Insert directly using the base table with 'any' to bypass type checking
+      // since seller_leads table is not exposed in types
+      const insertData = {
+        ...input,
+        created_by: user.id,
+        org_id: organizationId,
+        organization_id: organizationId,
+      };
+
       const { data, error } = await supabase
-        .from("seller_leads")
-        .insert({
-          ...input,
-          created_by: user?.id,
-        })
+        .from("seller_leads" as any)
+        .insert(insertData)
         .select()
         .single();
 
       if (error) throw error;
-      return data as SellerLead;
+      return data as unknown as SellerLead;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["seller-leads"] });
@@ -154,30 +186,34 @@ export function useSellerLeads() {
 
   const updateLead = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SellerLead> & { id: string }) => {
-      // Server-side permission check with record ID
-      const permission = await requirePermission("seller_leads", "update", id);
+      // Server-side permission check with record ID - cast to bypass type checking
+      const permission = await requirePermission("seller_leads" as any, "update", id);
       if (!permission.allowed) {
         throw new Error(permission.reason || "Permission denied");
       }
 
-      // Get current lead to check for status change
+      // Get current lead to check for status change using secure view
       const { data: currentLead } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("status")
         .eq("id", id)
         .single();
       
       const oldStatus = currentLead?.status;
       
+      // Remove org_id from updates
+      const { org_id, organization_id, ...safeUpdates } = updates;
+      
+      // Update using base table with 'any' to bypass type checking
       const { data, error } = await supabase
-        .from("seller_leads")
-        .update(updates)
+        .from("seller_leads" as any)
+        .update(safeUpdates)
         .eq("id", id)
         .select()
         .single();
 
       if (error) throw error;
-      return { lead: data as SellerLead, oldStatus, newStatus: updates.status };
+      return { lead: data as unknown as SellerLead, oldStatus, newStatus: updates.status };
     },
     onSuccess: ({ lead, oldStatus, newStatus }) => {
       queryClient.invalidateQueries({ queryKey: ["seller-leads"] });
@@ -201,14 +237,14 @@ export function useSellerLeads() {
 
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
-      // Server-side permission check with record ID
-      const permission = await requirePermission("seller_leads", "delete", id);
+      // Server-side permission check with record ID - cast to bypass type checking
+      const permission = await requirePermission("seller_leads" as any, "delete", id);
       if (!permission.allowed) {
         throw new Error(permission.reason || "Permission denied");
       }
 
       const { error } = await supabase
-        .from("seller_leads")
+        .from("seller_leads" as any)
         .delete()
         .eq("id", id);
 
@@ -249,13 +285,13 @@ export function useSellerLead(id: string | undefined) {
       if (!id) return null;
       
       const { data, error } = await supabase
-        .from("seller_leads")
+        .from("secure_seller_leads")
         .select("*")
         .eq("id", id)
         .single();
 
       if (error) throw error;
-      return data as SellerLead;
+      return data as unknown as SellerLead;
     },
     enabled: !!user && !!id,
   });

@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface MessengerConversation {
   id: string;
@@ -13,6 +15,8 @@ export interface MessengerConversation {
   last_message_at: string | null;
   created_at: string;
   created_by: string | null;
+  org_id: string;
+  organization_id: string;
 }
 
 export interface MessengerMessage {
@@ -26,6 +30,16 @@ export interface MessengerMessage {
   created_at: string;
 }
 
+// Helper to get user's organization_id
+const getUserOrganizationId = async (userId: string): Promise<string | null> => {
+  const { data } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .single();
+  return data?.organization_id || null;
+};
+
 export function useConversations() {
   return useQuery({
     queryKey: ["messenger-conversations"],
@@ -36,7 +50,7 @@ export function useConversations() {
         .order("last_message_at", { ascending: false, nullsFirst: false });
 
       if (error) throw error;
-      return data as MessengerConversation[];
+      return data as unknown as MessengerConversation[];
     },
   });
 }
@@ -134,9 +148,12 @@ export function useUpdateConversation() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MessengerConversation> & { id: string }) => {
+      // Remove org_id from updates
+      const { org_id, organization_id, ...safeUpdates } = updates;
+      
       const { data, error } = await supabase
         .from("messenger_conversations")
-        .update(updates)
+        .update(safeUpdates)
         .eq("id", id)
         .select()
         .single();
@@ -159,16 +176,32 @@ export function useUpdateConversation() {
 
 export function useConvertToBuyer() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
+
+  // Fetch user's organization ID
+  useEffect(() => {
+    if (user?.id) {
+      getUserOrganizationId(user.id).then(setUserOrgId);
+    }
+  }, [user?.id]);
 
   return useMutation({
     mutationFn: async ({ conversationId, name, phone }: { conversationId: string; name: string; phone?: string }) => {
-      // Create buyer
+      if (!user?.id) throw new Error('User not authenticated');
+      
+      const organizationId = userOrgId || await getUserOrganizationId(user.id);
+      if (!organizationId) throw new Error('User organization not found');
+
+      // Create buyer with required org_id
       const { data: buyer, error: buyerError } = await supabase
         .from("buyers")
         .insert({
           name,
           phone,
           notes: "Converted from Facebook Messenger",
+          org_id: organizationId,
+          organization_id: organizationId,
         })
         .select()
         .single();
