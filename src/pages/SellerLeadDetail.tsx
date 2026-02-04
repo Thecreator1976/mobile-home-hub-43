@@ -30,6 +30,7 @@ import {
   Calculator,
   Briefcase,
   CalendarClock,
+  Brain,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSellerLead, useSellerLeads, LeadStatus } from "@/hooks/useSellerLeads";
@@ -40,6 +41,8 @@ import { CallWithOpenPhoneButton } from "@/components/integrations/CallWithOpenP
 import { SMSWithOpenPhoneButton } from "@/components/integrations/SMSWithOpenPhoneButton";
 import { useAppointments } from "@/hooks/useAppointments";
 import { PropertyAppointmentHistory } from "@/components/appointments/PropertyAppointmentHistory";
+import SellerBuyerMatcher from "@/components/ai/SellerBuyerMatcher";
+import PropertyDescriptionGenerator from "@/components/ai/PropertyDescriptionGenerator";
 
 const statusConfig: Record<LeadStatus, { label: string; color: string }> = {
   new: { label: "New", color: "bg-blue-100 text-blue-800" },
@@ -269,6 +272,10 @@ export default function SellerLeadDetail() {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="property">Property</TabsTrigger>
             <TabsTrigger value="financials">Financials</TabsTrigger>
+            <TabsTrigger value="ai">
+              <Brain className="h-4 w-4 mr-1" />
+              AI Tools
+            </TabsTrigger>
             <TabsTrigger value="appointments">
               <CalendarClock className="h-4 w-4 mr-1" />
               Appointments ({leadAppointments.length})
@@ -470,6 +477,29 @@ export default function SellerLeadDetail() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* AI Tools Tab */}
+          <TabsContent value="ai" className="space-y-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <SellerBuyerMatcher lead={lead} />
+              <PropertyDescriptionGenerator
+                property={{
+                  address: lead.address,
+                  city: lead.city || undefined,
+                  state: lead.state || undefined,
+                  home_type: lead.home_type,
+                  year_built: lead.year_built || undefined,
+                  length_ft: lead.length_ft || undefined,
+                  width_ft: lead.width_ft || undefined,
+                  condition: lead.condition || undefined,
+                  asking_price: lead.asking_price,
+                  lot_rent: lead.lot_rent || undefined,
+                  park_owned: lead.park_owned || undefined,
+                  notes: lead.notes || undefined,
+                }}
+              />
+            </div>
           </TabsContent>
 
           {/* Appointments Tab */}

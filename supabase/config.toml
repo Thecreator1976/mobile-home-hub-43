@@ -20,3 +20,9 @@ verify_jwt = true
 
 [functions.send-invitation]
 verify_jwt = true
+
+[functions.ai-property-match]
+verify_jwt = true
+
+[functions.ai-generate-description]
+verify_jwt = true
