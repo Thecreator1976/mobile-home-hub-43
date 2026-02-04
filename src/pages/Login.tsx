@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Home, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Home, Mail, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/lib/validations";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -17,10 +18,26 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, isLoading: authLoading } = useAuth();
+  // @ts-ignore - sessionExpired and setSessionExpired are dynamically added
+  const { signIn, user, isLoading: authLoading, sessionExpired, setSessionExpired } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const from = (location.state as { from?: string })?.from || "/dashboard";
+  
+  // Show toast and clear expired flag when detected
+  useEffect(() => {
+    if (sessionExpired) {
+      toast({
+        title: "Session expired",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      // Reset the flag after showing
+      if (setSessionExpired) {
+        setSessionExpired(false);
+      }
+    }
+  }, [sessionExpired, setSessionExpired]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
