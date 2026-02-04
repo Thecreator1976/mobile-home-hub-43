@@ -1,55 +1,83 @@
-# Server-Side Permission Middleware - IMPLEMENTED ✅
 
-## Implementation Complete
 
-All components of the permission middleware have been implemented:
+## Plan: Auto-Clear Invalid Auth Tokens
 
-### Files Created
+### Problem
+When you try to log in, the browser may have stale authentication tokens stored from previous sessions. These invalid tokens cause authentication to fail silently, requiring you to manually open dev tools and clear localStorage.
 
-1. **`src/lib/permissions.ts`** - Core permission middleware with:
-   - `requireAuth()` - Authentication verification
-   - `requirePermission(table, action, recordId?)` - CRUD permission validation via RPC
-   - `checkRecordAccess(table, recordId)` - Record-level access verification
-   - `getPermissionContext()` - Complete permission context
-   - Helper functions: `hasRole()`, `isSuperAdmin()`, `isAdminOrAgent()`, `canAccessOrg()`
+### Solution
+Improve the authentication system to automatically detect and clear invalid tokens, so you can simply refresh the page or log in normally without touching dev tools.
 
-2. **`src/hooks/usePermissions.ts`** - React hooks for permission checking:
-   - `usePermissionContext()` - Cached permission context
-   - `usePermissions()` - Main hook with `canPerform`, `canPerformSync`, `canAccessRecord`
-   - `useCanPerform(table, action, recordId?)` - Specific permission check
-   - `useRecordAccess(table, recordId)` - Record access check
+---
 
-3. **`src/components/auth/PermissionGuard.tsx`** - UI components:
-   - `PermissionGuard` - Server-side permission validation wrapper
-   - `RoleGuard` - Quick role-based guard
-   - `AdminGuard` - Admin-only content wrapper
-   - `AgentGuard` - Admin/agent content wrapper
+## What Will Change
 
-### Files Modified
+### 1. Enhanced Error Detection in Auth Context
+The login system will be updated to:
+- Detect when stored tokens are invalid or expired
+- Automatically sign out and clear corrupted session data
+- Listen for `TOKEN_REFRESHED` events that fail silently
+- Catch `AuthSessionMissingError` and similar auth errors
 
-4. **`src/hooks/useSellerLeads.ts`** - Added permission checks to:
-   - `createLead` - Validates insert permission
-   - `updateLead` - Validates update permission with record ID
-   - `deleteLead` - Validates delete permission with record ID
+### 2. Automatic Token Cleanup
+When an invalid token is detected:
+- The system will call `signOut()` to clear all auth state
+- All localStorage entries for this project will be cleaned
+- You'll be redirected to the login page with a fresh state
 
-5. **`src/hooks/useBuyers.ts`** - Added permission checks to:
-   - `createBuyer` - Validates insert permission
-   - `updateBuyer` - Validates update permission with record ID
-   - `deleteBuyer` - Validates delete permission with record ID
+### 3. Better Error Feedback
+- A toast message will inform you if an expired session was automatically cleared
+- The login page will show if you were redirected due to session expiration
 
-## Permission Matrix Applied
+---
 
-| Role | SELECT | INSERT | UPDATE | DELETE |
-|------|--------|--------|--------|--------|
-| super_admin | All | All | All | All |
-| tenant_admin | Org | Org | Org | Org |
-| admin | Org | Org | Org | Org |
-| agent | Org | Org | Own | None |
-| viewer | Org | None | None | None |
+## Technical Implementation
 
-## Security Features
+### Files to Modify
 
-- **Server-Side Validation**: All checks use Supabase RPC functions
-- **Fail-Secure**: Access denied by default if verification fails
-- **Record-Level Security**: Organization and ownership verification
-- **No Client-Side Trust**: Always verifies via database RPCs
+**`src/contexts/AuthContext.tsx`**
+- Add error handling in `getSession()` to catch invalid token errors
+- Listen for `TOKEN_REFRESHED` failures in `onAuthStateChange`
+- Create a `clearAuthState()` helper that clears localStorage and resets state
+- Handle `SIGNED_OUT` events triggered by failed token refreshes
+
+**`src/pages/Login.tsx`**
+- Display a message when redirected due to session expiration
+- Use URL parameters or location state to detect this scenario
+
+### Key Code Changes
+
+```typescript
+// In AuthContext - Enhanced session handling
+supabase.auth.getSession().then(({ data: { session }, error }) => {
+  if (error) {
+    console.error("Session error, clearing auth state:", error);
+    clearAuthState();
+    return;
+  }
+  // ... existing logic
+});
+
+// In onAuthStateChange - Handle token refresh failures
+if (event === 'TOKEN_REFRESHED' && !session) {
+  // Token refresh failed - session is invalid
+  clearAuthState();
+}
+
+if (event === 'SIGNED_OUT') {
+  // Ensure all state is cleared
+  clearAuthState();
+}
+```
+
+---
+
+## After Implementation
+
+You'll be able to:
+1. Refresh the page normally - invalid tokens will auto-clear
+2. Go directly to `/login` - no dev tools needed
+3. See a friendly message explaining why you were logged out
+
+No more manual localStorage clearing required.
+
