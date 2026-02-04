@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 type AppRole = "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin";
 
@@ -26,28 +27,78 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to clear all Supabase auth tokens from localStorage
+const clearSupabaseLocalStorage = () => {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  console.log("Cleared Supabase localStorage keys:", keysToRemove);
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [userOrganization, setUserOrganization] = useState<UserOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const isSuperAdmin = userRole === "super_admin";
   const isTenantAdmin = userRole === "tenant_admin";
 
+  // Clears all auth state and localStorage tokens
+  const clearAuthState = async (expired: boolean = false) => {
+    console.log("Clearing auth state, expired:", expired);
+    clearSupabaseLocalStorage();
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
+    setUserOrganization(null);
+    if (expired) {
+      setSessionExpired(true);
+    }
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      // Ignore signOut errors during cleanup
+      console.log("SignOut during cleanup:", e);
+    }
+  };
+
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, currentSession) => {
         console.log("Auth state changed:", event);
-        setSession(session);
-        setUser(session?.user ?? null);
+        
+        // Handle token refresh failures - session exists but refresh failed
+        if (event === 'TOKEN_REFRESHED' && !currentSession) {
+          console.warn("Token refresh failed, clearing auth state");
+          await clearAuthState(true);
+          return;
+        }
+
+        // Handle sign out events
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setUserOrganization(null);
+          return;
+        }
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
 
         // Defer role and org fetch to avoid deadlock
-        if (session?.user) {
+        if (currentSession?.user) {
           setTimeout(() => {
-            fetchUserRoleAndOrg(session.user.id);
+            fetchUserRoleAndOrg(currentSession.user.id);
           }, 0);
         } else {
           setUserRole(null);
@@ -56,13 +107,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRoleAndOrg(session.user.id);
+    // THEN check for existing session with error handling
+    supabase.auth.getSession().then(async ({ data: { session: existingSession }, error }) => {
+      if (error) {
+        console.error("Session error, clearing auth state:", error);
+        await clearAuthState(true);
+        setIsLoading(false);
+        return;
       }
+      
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      if (existingSession?.user) {
+        fetchUserRoleAndOrg(existingSession.user.id);
+      }
+      setIsLoading(false);
+    }).catch(async (error) => {
+      console.error("Unexpected session error:", error);
+      await clearAuthState(true);
       setIsLoading(false);
     });
 
@@ -167,6 +229,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         signOut,
+        // @ts-ignore - expose for login page
+        sessionExpired,
+        // @ts-ignore - expose for login page to reset flag
+        setSessionExpired,
       }}
     >
       {children}
