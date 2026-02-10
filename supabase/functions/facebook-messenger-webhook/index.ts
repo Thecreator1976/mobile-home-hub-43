@@ -148,25 +148,29 @@ Deno.serve(async (req) => {
 
             if (convError && convError.code === "PGRST116") {
               // Conversation doesn't exist, create one
-              // Extract organization_id from URL query parameter
-              const orgId = url.searchParams.get("org_id");
+              // Resolve organization from the Facebook Page ID in the webhook entry
+              const pageId = entry.id;
               
-              if (!orgId) {
-                console.error("Missing org_id parameter - cannot create conversation without organization context");
+              if (!pageId) {
+                console.error("Missing page ID in webhook entry - cannot determine organization");
                 continue;
               }
               
-              // Validate organization exists
-              const { data: org, error: orgError } = await supabase
-                .from("organizations")
-                .select("id")
-                .eq("id", orgId)
+              // Look up organization by Facebook Page ID from integrations
+              const { data: integration, error: integrationError } = await supabase
+                .from("external_integrations")
+                .select("organization_id")
+                .eq("service_name", "facebook_messenger")
+                .eq("is_active", true)
+                .filter("config->>page_id", "eq", pageId)
                 .single();
               
-              if (orgError || !org) {
-                console.error("Invalid org_id - organization not found");
+              if (integrationError || !integration?.organization_id) {
+                console.error("No active Facebook Messenger integration found for this page");
                 continue;
               }
+              
+              const orgId = integration.organization_id;
               
               const { data: newConv, error: createError } = await supabase
                 .from("messenger_conversations")

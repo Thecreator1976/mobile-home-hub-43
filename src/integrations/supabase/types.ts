@@ -85,21 +85,7 @@ export type Database = {
             foreignKeyName: "appointments_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "buyers_viewer"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
             referencedRelation: "secure_buyers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "appointments_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -473,7 +459,7 @@ export type Database = {
           expense_date: string | null
           id: string
           org_id: string
-          organization_id: string | null
+          organization_id: string
           receipt_url: string | null
           seller_lead_id: string | null
         }
@@ -486,7 +472,7 @@ export type Database = {
           expense_date?: string | null
           id?: string
           org_id: string
-          organization_id?: string | null
+          organization_id: string
           receipt_url?: string | null
           seller_lead_id?: string | null
         }
@@ -499,7 +485,7 @@ export type Database = {
           expense_date?: string | null
           id?: string
           org_id?: string
-          organization_id?: string | null
+          organization_id?: string
           receipt_url?: string | null
           seller_lead_id?: string | null
         }
@@ -729,21 +715,7 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "buyers_viewer"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messenger_conversations_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
             referencedRelation: "secure_buyers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messenger_conversations_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -911,7 +883,7 @@ export type Database = {
           issued_date: string
           notes: string | null
           org_id: string
-          organization_id: string | null
+          organization_id: string
           purpose: string
           repaid_date: string | null
           repayment_terms: string | null
@@ -929,7 +901,7 @@ export type Database = {
           issued_date?: string
           notes?: string | null
           org_id: string
-          organization_id?: string | null
+          organization_id: string
           purpose: string
           repaid_date?: string | null
           repayment_terms?: string | null
@@ -947,7 +919,7 @@ export type Database = {
           issued_date?: string
           notes?: string | null
           org_id?: string
-          organization_id?: string | null
+          organization_id?: string
           purpose?: string
           repaid_date?: string | null
           repayment_terms?: string | null
@@ -1034,6 +1006,7 @@ export type Database = {
           subscription_tier: string | null
           updated_at: string
           user_id: string
+          user_type: Database["public"]["Enums"]["user_type_enum"] | null
         }
         Insert: {
           avatar_url?: string | null
@@ -1049,6 +1022,7 @@ export type Database = {
           subscription_tier?: string | null
           updated_at?: string
           user_id: string
+          user_type?: Database["public"]["Enums"]["user_type_enum"] | null
         }
         Update: {
           avatar_url?: string | null
@@ -1064,6 +1038,7 @@ export type Database = {
           subscription_tier?: string | null
           updated_at?: string
           user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type_enum"] | null
         }
         Relationships: [
           {
@@ -1084,7 +1059,7 @@ export type Database = {
           items: Json
           notes: string | null
           org_id: string
-          organization_id: string | null
+          organization_id: string
           po_number: string
           seller_lead_id: string | null
           status: string
@@ -1100,7 +1075,7 @@ export type Database = {
           items?: Json
           notes?: string | null
           org_id: string
-          organization_id?: string | null
+          organization_id: string
           po_number: string
           seller_lead_id?: string | null
           status?: string
@@ -1116,7 +1091,7 @@ export type Database = {
           items?: Json
           notes?: string | null
           org_id?: string
-          organization_id?: string | null
+          organization_id?: string
           po_number?: string
           seller_lead_id?: string | null
           status?: string
@@ -1392,34 +1367,6 @@ export type Database = {
       }
     }
     Views: {
-      access_control_demo: {
-        Row: {
-          access_level: string | null
-          access_summary: string | null
-          accessible_buyers: number | null
-          accessible_leads: number | null
-          can_see_contacts: boolean | null
-          can_see_financials: boolean | null
-          email: string | null
-          is_super_admin: boolean | null
-          org_role: string | null
-          test_user: string | null
-        }
-        Relationships: []
-      }
-      access_control_demo_simple: {
-        Row: {
-          access_level: string | null
-          buyers_in_org: number | null
-          email: string | null
-          full_name: string | null
-          leads_in_org: number | null
-          org_role: string | null
-          permissions_summary: string | null
-          users_in_org: number | null
-        }
-        Relationships: []
-      }
       access_control_summary: {
         Row: {
           access_level: string | null
@@ -1512,21 +1459,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      buyers_viewer: {
-        Row: {
-          created_at: string | null
-          id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string | null
-        }
-        Relationships: []
       }
       current_user_access: {
         Row: {
@@ -1726,21 +1658,7 @@ export type Database = {
             foreignKeyName: "messenger_conversations_buyer_id_fkey"
             columns: ["buyer_id"]
             isOneToOne: false
-            referencedRelation: "buyers_viewer"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messenger_conversations_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
             referencedRelation: "secure_buyers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messenger_conversations_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "test_secure_buyers"
             referencedColumns: ["id"]
           },
           {
@@ -1951,38 +1869,6 @@ export type Database = {
         }
         Relationships: []
       }
-      test_secure_buyers: {
-        Row: {
-          access_level: string | null
-          created_by: string | null
-          id: string | null
-          name: string | null
-          organization_id: string | null
-        }
-        Insert: {
-          access_level?: never
-          created_by?: string | null
-          id?: string | null
-          name?: string | null
-          organization_id?: string | null
-        }
-        Update: {
-          access_level?: never
-          created_by?: string | null
-          id?: string | null
-          name?: string | null
-          organization_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "buyers_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_access_matrix: {
         Row: {
           access_level: string | null
@@ -2172,6 +2058,7 @@ export type Database = {
         | "under_contract"
         | "closed"
         | "lost"
+      user_type_enum: "admin" | "agent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2318,6 +2205,7 @@ export const Constants = {
         "closed",
         "lost",
       ],
+      user_type_enum: ["admin", "agent"],
     },
   },
 } as const
