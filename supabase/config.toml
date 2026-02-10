@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.ai-generate-description]
 verify_jwt = true
+
+[functions.create-user-with-password]
+verify_jwt = false
