@@ -320,12 +320,10 @@ export default function AdminUsers() {
             <h1 className="text-2xl lg:text-3xl font-bold">User Management</h1>
             <p className="text-muted-foreground">Manage user roles and approval status</p>
           </div>
-          {!isSuperAdmin && (
-            <Button variant="gradient" onClick={handleOpenInviteDialog}>
-              <Mail className="h-4 w-4 mr-2" />
-              Invite User
-            </Button>
-          )}
+          <Button variant="gradient" onClick={handleOpenInviteDialog}>
+            <Mail className="h-4 w-4 mr-2" />
+            Invite User
+          </Button>
         </div>
 
         {/* Stats */}
