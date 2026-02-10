@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Calculator, DollarSign, Home, TrendingUp, ArrowLeft, ChevronDown, Info } from "lucide-react";
+import { Calculator, DollarSign, Home, TrendingUp, ArrowLeft, ChevronDown, Info, Tag } from "lucide-react";
+
+type Decade = "1980s" | "1990s" | "2000s" | "2010s";
 
 interface PropertyData {
-  decade: "1980s" | "1990s";
+  decade: Decade;
   condition: number | null;
   length: number | null;
   width: number | null;
@@ -22,71 +24,93 @@ interface PropertyData {
 
 // Price per Sq Ft Reference Table (SC Base)
 // Returns [min, max] range
-const PRICE_PER_SQFT: Record<string, Record<number, [number, number]>> = {
+const PRICE_PER_SQFT: Record<Decade, Record<number, [number, number]>> = {
   "1980s": {
-    1: [1.5, 2],      // Not livable, needs full remodel
-    2: [2.5, 3],      // Hardly livable, needs major repairs
-    3: [4, 4.5],      // Livable, needs minor updates/repairs
-    4: [5.5, 6],      // Livable, needs only minor updates
-    5: [6.5, 7],      // Livable, fully remodeled
+    1: [1.5, 2],
+    2: [2.5, 3],
+    3: [4, 4.5],
+    4: [5.5, 6],
+    5: [6.5, 7],
   },
   "1990s": {
-    1: [2, 2.5],      // Not livable, needs full remodel
-    2: [3, 3.5],      // Hardly livable, needs major repairs
-    3: [4.5, 5],      // Livable, needs minor updates/repairs
-    4: [6, 6.5],      // Livable, needs only minor updates
-    5: [7.5, 8],      // Livable, fully remodeled
+    1: [2, 2.5],
+    2: [3, 3.5],
+    3: [4.5, 5],
+    4: [6, 6.5],
+    5: [7.5, 8],
+  },
+  "2000s": {
+    1: [4.5, 5],
+    2: [5.5, 6],
+    3: [7.5, 8],
+    4: [9.5, 10],
+    5: [11.5, 12],
+  },
+  "2010s": {
+    1: [6.5, 7],
+    2: [11.5, 12],
+    3: [14.5, 15],
+    4: [20.5, 21],
+    5: [21.5, 22],
   },
 };
 
 const CONDITION_DESCRIPTIONS: Record<number, string> = {
-  1: "Not livable, needs full remodel",
-  2: "Hardly livable, needs major repairs",
-  3: "Livable, needs minor updates/repairs",
-  4: "Livable, needs only minor updates",
-  5: "Livable, fully remodeled",
+  1: "Not livable, needs complete full remodel",
+  2: "Hardly livable, needs major repairs and updates",
+  3: "Livable/rentable, needs minor updates and repairs",
+  4: "Livable/rentable, needs minor updates (paint/carpet), no repairs",
+  5: "Livable/rentable, fully remodeled, no updates or repairs needed",
 };
 
-function getPricePerSqFt(decade: string, condition: number): number {
+const CONDITION_SHORT: Record<number, string> = {
+  1: "Not livable, full remodel",
+  2: "Hardly livable, major repairs",
+  3: "Livable, minor updates + repairs",
+  4: "Livable, minor updates only",
+  5: "Fully remodeled",
+};
+
+function getPricePerSqFt(decade: Decade, condition: number): number {
   const range = PRICE_PER_SQFT[decade]?.[condition];
-  if (!range) return 4; // default fallback
-  // Use midpoint of range
+  if (!range) return 4;
   return (range[0] + range[1]) / 2;
 }
+
+const WHOLESALE_FACTOR = 0.45;
 
 interface CalculationBreakdown {
   sqft: number;
   pricePerSqFt: number;
   basePrice: number;
-  locationAdjusted: number;
-  finalPrice: number;
-  movingFactor: number;
-  wholesaleDiscount: number;
+  retailPrice: number;
+  adjustedRetail: number;
+  wholesalePrice: number;
   marketAdjustment: number;
 }
 
-function calculateWholesalePrice(data: PropertyData): CalculationBreakdown | null {
+function calculatePrices(data: PropertyData): CalculationBreakdown | null {
   const sqft = (data.length || 0) * (data.width || 0);
   if (sqft === 0 || !data.condition) return null;
-  
+
   const pricePerSqFt = getPricePerSqFt(data.decade, data.condition);
-  const movingFactor = 2;
-  const wholesaleDiscount = 0.92;
   const marketAdjustment = data.marketAdjustment;
-  
-  // Formula: [Sq Ft × 2 × Price per Sq Ft] × (1 + Market%/100) × 0.92
-  const basePrice = sqft * movingFactor * pricePerSqFt;
-  const locationAdjusted = basePrice * (1 + marketAdjustment / 100);
-  const finalPrice = Math.round(locationAdjusted * wholesaleDiscount);
-  
+
+  // Retail = Sq Ft × Midpoint × 2
+  const basePrice = sqft * pricePerSqFt;
+  const retailPrice = basePrice * 2;
+  // Adjusted Retail = Retail × (1 + Market%/100)
+  const adjustedRetail = Math.round(retailPrice * (1 + marketAdjustment / 100));
+  // Wholesale = Adjusted Retail × 0.45
+  const wholesalePrice = Math.round(adjustedRetail * WHOLESALE_FACTOR);
+
   return {
     sqft,
     pricePerSqFt,
     basePrice,
-    locationAdjusted,
-    finalPrice,
-    movingFactor,
-    wholesaleDiscount,
+    retailPrice,
+    adjustedRetail,
+    wholesalePrice,
     marketAdjustment,
   };
 }
@@ -94,21 +118,23 @@ function calculateWholesalePrice(data: PropertyData): CalculationBreakdown | nul
 export default function ValueEstimator() {
   const [searchParams] = useSearchParams();
   const leadId = searchParams.get("leadId");
-  
-  // Determine decade from yearBuilt param
-  const getDecadeFromYear = (year: string | null): "1980s" | "1990s" => {
+
+  const getDecadeFromYear = (year: string | null): Decade => {
     if (!year) return "1990s";
     const y = parseInt(year);
-    if (y >= 1980 && y < 1990) return "1980s";
-    return "1990s";
+    if (y >= 2010) return "2010s";
+    if (y >= 2000) return "2000s";
+    if (y >= 1990) return "1990s";
+    if (y >= 1980) return "1980s";
+    return "1980s";
   };
-  
+
   const [data, setData] = useState<PropertyData>({
     decade: getDecadeFromYear(searchParams.get("yearBuilt")),
     condition: searchParams.get("condition") ? parseInt(searchParams.get("condition")!) : null,
     length: searchParams.get("length") ? parseInt(searchParams.get("length")!) : null,
     width: searchParams.get("width") ? parseInt(searchParams.get("width")!) : null,
-    marketAdjustment: 0, // SC base = 0%
+    marketAdjustment: 0,
     parkOwned: searchParams.get("parkOwned") === "true",
     lotRent: searchParams.get("lotRent") ? parseInt(searchParams.get("lotRent")!) : null,
   });
@@ -117,7 +143,6 @@ export default function ValueEstimator() {
   const [hasCalculated, setHasCalculated] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(false);
 
-  // Auto-calculate if coming from a lead with data
   useEffect(() => {
     if (leadId && (data.length || data.width || data.condition)) {
       handleCalculate();
@@ -130,7 +155,7 @@ export default function ValueEstimator() {
   };
 
   const handleCalculate = () => {
-    const result = calculateWholesalePrice(data);
+    const result = calculatePrices(data);
     setBreakdown(result);
     setHasCalculated(true);
   };
@@ -152,8 +177,8 @@ export default function ValueEstimator() {
             </Button>
           )}
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Wholesale Price Calculator</h1>
-            <p className="text-muted-foreground">Calculate wholesale prices using the standardized formula</p>
+            <h1 className="text-3xl font-bold tracking-tight">Property Value Estimator</h1>
+            <p className="text-muted-foreground">Calculate retail listing and wholesale purchase prices</p>
           </div>
         </div>
 
@@ -165,37 +190,39 @@ export default function ValueEstimator() {
                 <Home className="h-5 w-5" />
                 Property Details
               </CardTitle>
-              <CardDescription>Enter property information to calculate wholesale price</CardDescription>
+              <CardDescription>Enter property information to estimate prices</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="decade">Decade Built</Label>
-                  <Select value={data.decade} onValueChange={(value: "1980s" | "1990s") => handleChange("decade", value)}>
+                  <Select value={data.decade} onValueChange={(value: Decade) => handleChange("decade", value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select decade" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1980s">1980s</SelectItem>
                       <SelectItem value="1990s">1990s</SelectItem>
+                      <SelectItem value="2000s">2000s</SelectItem>
+                      <SelectItem value="2010s">2010s</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="condition">Condition</Label>
-                  <Select 
-                    value={data.condition?.toString() || ""} 
+                  <Select
+                    value={data.condition?.toString() || ""}
                     onValueChange={(value) => handleChange("condition", parseInt(value))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select condition" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">1 - Not livable, full remodel</SelectItem>
-                      <SelectItem value="2">2 - Hardly livable, major repairs</SelectItem>
-                      <SelectItem value="3">3 - Livable, minor updates needed</SelectItem>
-                      <SelectItem value="4">4 - Livable, only minor updates</SelectItem>
-                      <SelectItem value="5">5 - Fully remodeled</SelectItem>
+                      <SelectItem value="1">⭐ 1 - {CONDITION_SHORT[1]}</SelectItem>
+                      <SelectItem value="2">🟩 2 - {CONDITION_SHORT[2]}</SelectItem>
+                      <SelectItem value="3">🟦 3 - {CONDITION_SHORT[3]}</SelectItem>
+                      <SelectItem value="4">🟧 4 - {CONDITION_SHORT[4]}</SelectItem>
+                      <SelectItem value="5">🟨 5 - {CONDITION_SHORT[5]}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -280,36 +307,63 @@ export default function ValueEstimator() {
 
               <Button onClick={handleCalculate} className="w-full" size="lg">
                 <Calculator className="mr-2 h-5 w-5" />
-                Calculate Wholesale Price
+                Calculate Prices
               </Button>
             </CardContent>
           </Card>
 
           {/* Results */}
           <div className="space-y-6">
-            <Card className={hasCalculated ? "border-primary" : ""}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Wholesale Price
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {hasCalculated && breakdown ? (
-                  <div className="text-center py-6">
-                    <p className="text-5xl font-bold text-primary mb-2">
-                      {formatCurrency(breakdown.finalPrice)}
-                    </p>
-                    <p className="text-muted-foreground">With 8% wholesale discount applied</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Calculator className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Enter property details and click calculate</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Two price cards side by side */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card className={hasCalculated && breakdown ? "border-primary" : ""}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <DollarSign className="h-4 w-4" />
+                    Retail Listing Price
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {hasCalculated && breakdown ? (
+                    <div className="text-center py-4">
+                      <p className="text-3xl font-bold text-primary">
+                        {formatCurrency(breakdown.adjustedRetail)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Sq Ft × Midpoint × 2</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <DollarSign className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Enter details to calculate</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className={hasCalculated && breakdown ? "border-green-500" : ""}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Tag className="h-4 w-4" />
+                    Wholesale Purchase Price
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {hasCalculated && breakdown ? (
+                    <div className="text-center py-4">
+                      <p className="text-3xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(breakdown.wholesalePrice)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Retail × 0.45</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-muted-foreground">
+                      <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Enter details to calculate</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             {hasCalculated && breakdown && (
               <>
@@ -338,34 +392,30 @@ export default function ValueEstimator() {
                             <span className="text-muted-foreground">Price per Sq Ft ({data.decade}, Condition {data.condition})</span>
                             <span className="font-medium">${breakdown.pricePerSqFt.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Moving Cost Factor</span>
-                            <span className="font-medium">×2</span>
-                          </div>
                           <div className="border-t pt-3 flex justify-between">
-                            <span className="text-muted-foreground">Base Price</span>
+                            <span className="text-muted-foreground">Step 1: Sq Ft × Midpoint</span>
                             <span className="font-medium">{formatCurrency(breakdown.basePrice)}</span>
                           </div>
                           <div className="flex justify-between text-xs">
                             <span className="text-muted-foreground italic">
-                              {breakdown.sqft} × 2 × ${breakdown.pricePerSqFt.toFixed(2)}
+                              {breakdown.sqft.toLocaleString()} × ${breakdown.pricePerSqFt.toFixed(2)}
                             </span>
                           </div>
+                          <div className="border-t pt-3 flex justify-between">
+                            <span className="text-muted-foreground">Step 2: Base × 2 = Retail</span>
+                            <span className="font-medium">{formatCurrency(breakdown.retailPrice)}</span>
+                          </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Market Adjustment ({breakdown.marketAdjustment >= 0 ? "+" : ""}{breakdown.marketAdjustment}%)</span>
+                            <span className="text-muted-foreground">Step 3: Market Adjustment ({breakdown.marketAdjustment >= 0 ? "+" : ""}{breakdown.marketAdjustment}%)</span>
                             <span className="font-medium">×{(1 + breakdown.marketAdjustment / 100).toFixed(2)}</span>
                           </div>
                           <div className="border-t pt-3 flex justify-between">
-                            <span className="text-muted-foreground">Location Adjusted</span>
-                            <span className="font-medium">{formatCurrency(breakdown.locationAdjusted)}</span>
+                            <span className="text-muted-foreground">Adjusted Retail</span>
+                            <span className="font-medium text-primary">{formatCurrency(breakdown.adjustedRetail)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Wholesale Discount (8%)</span>
-                            <span className="font-medium">×0.92</span>
-                          </div>
-                          <div className="border-t pt-3 flex justify-between text-base">
-                            <span className="font-semibold">Final Wholesale Price</span>
-                            <span className="font-bold text-primary">{formatCurrency(breakdown.finalPrice)}</span>
+                            <span className="text-muted-foreground">Step 4: Retail × 0.45 = Wholesale</span>
+                            <span className="font-medium text-green-600 dark:text-green-400">{formatCurrency(breakdown.wholesalePrice)}</span>
                           </div>
                         </div>
                       </CardContent>
@@ -373,7 +423,7 @@ export default function ValueEstimator() {
                   </Collapsible>
                 </Card>
 
-                {/* Quick Reference */}
+                {/* Quick Reference - 2x2 grid for all 4 decades */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
@@ -383,28 +433,22 @@ export default function ValueEstimator() {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <p className="font-semibold mb-2">1980s Homes</p>
-                        <div className="space-y-1">
-                          {Object.entries(PRICE_PER_SQFT["1980s"]).map(([cond, range]) => (
-                            <div key={cond} className={`flex justify-between ${data.decade === "1980s" && data.condition === parseInt(cond) ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                              <span>Condition {cond}</span>
-                              <span>${range[0]} - ${range[1]}</span>
-                            </div>
-                          ))}
+                      {(["1980s", "1990s", "2000s", "2010s"] as Decade[]).map((decade) => (
+                        <div key={decade}>
+                          <p className={`font-semibold mb-2 ${data.decade === decade ? "text-primary" : ""}`}>{decade} Homes</p>
+                          <div className="space-y-1">
+                            {Object.entries(PRICE_PER_SQFT[decade]).map(([cond, range]) => (
+                              <div
+                                key={cond}
+                                className={`flex justify-between ${data.decade === decade && data.condition === parseInt(cond) ? "text-primary font-medium" : "text-muted-foreground"}`}
+                              >
+                                <span>Cond. {cond}</span>
+                                <span>${range[0]} - ${range[1]}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        <p className="font-semibold mb-2">1990s Homes</p>
-                        <div className="space-y-1">
-                          {Object.entries(PRICE_PER_SQFT["1990s"]).map(([cond, range]) => (
-                            <div key={cond} className={`flex justify-between ${data.decade === "1990s" && data.condition === parseInt(cond) ? "text-primary font-medium" : "text-muted-foreground"}`}>
-                              <span>Condition {cond}</span>
-                              <span>${range[0]} - ${range[1]}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -464,12 +508,15 @@ export default function ValueEstimator() {
           <CardHeader>
             <CardTitle className="text-base">Formula Reference</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <code className="text-sm bg-background px-3 py-2 rounded-md block">
-              Final Price = [Sq Ft × 2 × Price per Sq Ft] × (1 + Market%/100) × 0.92
+              Retail Price = Sq Ft × Midpoint Price Per Sq Ft × 2 × (1 + Market%/100)
+            </code>
+            <code className="text-sm bg-background px-3 py-2 rounded-md block">
+              Wholesale Price = Retail Price × 0.45
             </code>
             <p className="text-xs text-muted-foreground mt-3">
-              <strong>×2</strong> = Moving cost factor | <strong>×0.92</strong> = 8% wholesale discount | <strong>SC = 0%</strong> base market
+              <strong>×2</strong> = Retail multiplier | <strong>×0.45</strong> = Wholesale factor | <strong>SC = 0%</strong> base market
             </p>
           </CardContent>
         </Card>
