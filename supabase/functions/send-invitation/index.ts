@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 
 // Get environment variables
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const LOOP_API_KEY = Deno.env.get("LOOP_API_KEY");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -139,17 +139,20 @@ const handler = async (req: Request): Promise<Response> => {
     const roleName =
       role === "tenant_admin" ? "Tenant Admin" : role === "admin" ? "Admin" : role === "agent" ? "Agent" : "Viewer";
 
-    // Send invitation email using Resend with YOUR DOMAIN
-    const emailResponse = await fetch("https://api.resend.com/emails", {
+    // Send invitation email using Loop API
+    const loopResponse = await fetch("https://api.loop.email/v1/send", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+        Authorization: `Bearer ${LOOP_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Carolina's Mobile Home Market <noreply@carolinasmobilehomemarket.org>",
-        to: [email],
-        subject: `You've been invited to join ${organization_name} on Carolina's Mobile Home Market CRM`,
+        from: {
+          email: "noreply@carolinasmobilehomemarket.org",
+          name: "Carolina's Mobile Home Market",
+        },
+        to: [{ email }],
+        subject: `You're Invited to Join ${organization_name}`,
         html: `
         <!DOCTYPE html>
         <html>
@@ -164,18 +167,19 @@ const handler = async (req: Request): Promise<Response> => {
               <div style="background: linear-gradient(135deg, #3b82f6, #8b5cf6); width: 60px; height: 60px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
                 <span style="color: white; font-size: 24px;">🏠</span>
               </div>
-              <h1 style="margin: 0; color: #1f2937;">You're Invited to Carolina's Mobile Home Market!</h1>
+              <h1 style="margin: 0; color: #1f2937;">You're Invited!</h1>
+              <p style="color: #6b7280; margin-top: 10px;">Join Carolina's Mobile Home Market CRM</p>
             </div>
             
             <!-- Main Content -->
             <div style="background: #f9fafb; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
               <p style="margin: 0 0 16px 0; font-size: 16px;">
                 You've been invited to join <strong style="color: #2563eb;">${organization_name}</strong> 
-                on Carolina's Mobile Home Market CRM as a <strong style="color: #2563eb;">${roleName}</strong>.
+                as a <strong style="color: #2563eb;">${roleName}</strong> on Carolina's Mobile Home Market CRM.
               </p>
               
               <p style="margin: 0 0 20px 0; font-size: 16px;">
-                Click the button below to set up your account and get started managing mobile home listings:
+                This platform helps manage mobile home listings, tenants, and properties efficiently.
               </p>
               
               <!-- Invitation Button -->
@@ -190,56 +194,105 @@ const handler = async (req: Request): Promise<Response> => {
                           font-weight: 600; 
                           font-size: 16px;
                           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                  🏡 Accept Invitation
+                  🏡 Accept Invitation & Create Account
                 </a>
               </div>
+              
+              <p style="color: #6b7280; font-size: 14px; text-align: center;">
+                This link expires in 7 days
+              </p>
             </div>
             
             <!-- Alternative Link -->
-            <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">
-              <strong>Or copy and paste this link into your browser:</strong><br>
-              <a href="${inviteUrl}" 
-                 style="color: #3b82f6; 
-                        word-break: break-all; 
-                        font-size: 13px;
-                        text-decoration: none;">
-                ${inviteUrl}
-              </a>
-            </p>
-            
-            <!-- Expiration Notice -->
-            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0; color: #92400e; font-size: 14px;">
-                <strong>⚠️ Important:</strong> This invitation link will expire in 7 days.
+            <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+              <p style="color: #4b5563; font-size: 14px; margin: 0 0 8px 0;">
+                <strong>Alternative:</strong> Copy and paste this link:
               </p>
+              <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
+                <code style="color: #3b82f6; font-size: 13px; word-break: break-all;">
+                  ${inviteUrl}
+                </code>
+              </div>
+            </div>
+            
+            <!-- What to Expect -->
+            <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <h3 style="margin-top: 0; color: #1f2937;">What you can do as ${roleName}:</h3>
+              <ul style="color: #6b7280; padding-left: 20px; margin-bottom: 0;">
+                ${
+                  role === "tenant_admin"
+                    ? `<li>Manage multiple mobile home properties</li>
+                   <li>Handle tenant applications and leases</li>
+                   <li>Track maintenance requests</li>
+                   <li>Generate reports and analytics</li>`
+                    : role === "admin"
+                      ? `<li>Full access to all CRM features</li>
+                   <li>Manage team members and permissions</li>
+                   <li>Configure property settings</li>
+                   <li>View financial reports</li>`
+                      : role === "agent"
+                        ? `<li>Manage assigned properties</li>
+                   <li>Communicate with tenants</li>
+                   <li>Submit maintenance requests</li>
+                   <li>View property analytics</li>`
+                        : `<li>View assigned properties</li>
+                   <li>Submit maintenance requests</li>
+                   <li>Communicate with property managers</li>
+                   <li>Access tenant resources</li>`
+                }
+              </ul>
             </div>
             
             <!-- Footer -->
             <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
               <p style="color: #9ca3af; font-size: 14px; margin: 0 0 10px 0;">
                 <strong>Carolina's Mobile Home Market CRM</strong><br>
-                Professional mobile home listing management system
+                Professional mobile home management platform
               </p>
               
               <p style="color: #6b7280; font-size: 12px; margin: 0;">
-                This email was sent from: noreply@carolinasmobilehomemarket.org<br>
-                Website: https://carolinasmobilehomemarket.org
+                This invitation was sent from: noreply@carolinasmobilehomemarket.org<br>
+                For questions, please contact your organization administrator.
               </p>
               
               <p style="color: #9ca3af; font-size: 11px; margin-top: 20px;">
-                If you didn't expect this invitation, you can safely ignore this email.
+                If you received this email in error, please ignore it.
               </p>
             </div>
             
           </body>
         </html>
         `,
+        // Optional: Add text version for email clients that don't support HTML
+        text: `
+You've been invited to join ${organization_name} as ${roleName} on Carolina's Mobile Home Market CRM.
+
+Accept your invitation here: ${inviteUrl}
+
+This link expires in 7 days.
+
+What you can do as ${roleName}:
+${
+  role === "tenant_admin"
+    ? "- Manage multiple mobile home properties\n- Handle tenant applications and leases\n- Track maintenance requests\n- Generate reports and analytics"
+    : role === "admin"
+      ? "- Full access to all CRM features\n- Manage team members and permissions\n- Configure property settings\n- View financial reports"
+      : role === "agent"
+        ? "- Manage assigned properties\n- Communicate with tenants\n- Submit maintenance requests\n- View property analytics"
+        : "- View assigned properties\n- Submit maintenance requests\n- Communicate with property managers\n- Access tenant resources"
+}
+
+Carolina's Mobile Home Market CRM
+Professional mobile home management platform
+
+If you received this email in error, please ignore it.
+        `,
       }),
     });
 
-    if (!emailResponse.ok) {
-      const emailError = await emailResponse.text();
-      console.error("Error sending email:", emailError);
+    if (!loopResponse.ok) {
+      const loopError = await loopResponse.text();
+      console.error("Error sending email via Loop:", loopError);
 
       // Don't fail the whole operation if email fails - invitation is still created
       return new Response(
@@ -259,7 +312,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log("Invitation email sent successfully using Carolina's Mobile Home Market domain");
+    console.log("Invitation email sent successfully via Loop");
 
     return new Response(
       JSON.stringify({
