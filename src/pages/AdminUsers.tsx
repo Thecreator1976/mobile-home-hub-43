@@ -253,6 +253,19 @@ export default function AdminUsers() {
     });
 
     if (result.success) {
+      if (result.inviteUrl) {
+        // Email failed but invitation was created - show the link to copy
+        toast({
+          title: "Invitation Created - Copy Link",
+          description: result.inviteUrl,
+          duration: 30000,
+        });
+        await navigator.clipboard.writeText(result.inviteUrl).catch(() => {});
+        toast({
+          title: "Link Copied!",
+          description: "The invitation link has been copied to your clipboard. Share it with the user manually.",
+        });
+      }
       setInviteDialogOpen(false);
       setInviteEmail("");
     }
