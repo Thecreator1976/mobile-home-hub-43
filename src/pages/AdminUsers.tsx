@@ -64,8 +64,7 @@ export default function AdminUsers() {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<string>("agent");
-  const [invitePassword, setInvitePassword] = useState("");
-  const { sendInvitation, sending: sendingInvite, createUserDirect, creatingUser } = useInvitations();
+  const { sendInvitation, sending: sendingInvite } = useInvitations();
 
   useEffect(() => {
     fetchUsers();
@@ -236,7 +235,6 @@ export default function AdminUsers() {
   const handleOpenInviteDialog = () => {
     setInviteEmail("");
     setInviteRole("agent");
-    setInvitePassword("");
     setInviteDialogOpen(true);
   };
 
@@ -244,26 +242,6 @@ export default function AdminUsers() {
     if (!inviteEmail.trim()) return;
 
     const orgId = isSuperAdmin ? null : userOrganization?.id || null;
-
-    // If password is provided, create user directly
-    if (invitePassword.trim()) {
-      const result = await createUserDirect({
-        email: inviteEmail.trim(),
-        password: invitePassword.trim(),
-        organization_id: orgId,
-        role: inviteRole,
-      });
-
-      if (result.success) {
-        setInviteDialogOpen(false);
-        setInviteEmail("");
-        setInvitePassword("");
-        fetchUsers();
-      }
-      return;
-    }
-
-    // Otherwise, send email invitation
     const orgName = isSuperAdmin ? "MobileHome CRM" : userOrganization?.name || "MobileHome CRM";
 
     const result = await sendInvitation({
@@ -610,21 +588,6 @@ export default function AdminUsers() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Temporary Password <span className="text-muted-foreground font-normal">(optional)</span></label>
-                <Input
-                  type="password"
-                  placeholder="Set a password to create account instantly"
-                  value={invitePassword}
-                  onChange={(e) => setInvitePassword(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {invitePassword.trim()
-                    ? "Account will be created immediately — share the credentials with the user directly."
-                    : "Leave blank to send an email invitation link instead."}
-                </p>
-              </div>
-
-              <div className="space-y-2">
                 <label className="text-sm font-medium">Role</label>
                 <Select value={inviteRole} onValueChange={setInviteRole}>
                   <SelectTrigger>
@@ -651,17 +614,17 @@ export default function AdminUsers() {
               <Button 
                 variant="gradient" 
                 onClick={handleSendInvite} 
-                disabled={(sendingInvite || creatingUser) || !inviteEmail.trim()}
+                disabled={sendingInvite || !inviteEmail.trim()}
               >
-                {(sendingInvite || creatingUser) ? (
+                {sendingInvite ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {creatingUser ? "Creating..." : "Sending..."}
+                    Sending...
                   </>
                 ) : (
                   <>
                     <Mail className="mr-2 h-4 w-4" />
-                    {invitePassword.trim() ? "Create Account" : "Send Invitation"}
+                    Send Invitation
                   </>
                 )}
               </Button>

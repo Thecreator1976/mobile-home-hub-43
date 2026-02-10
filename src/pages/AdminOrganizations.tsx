@@ -101,7 +101,8 @@ export default function AdminOrganizations() {
   const [inviteOrgId, setInviteOrgId] = useState<string | null>(null);
   const [inviteOrgName, setInviteOrgName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const { sendInvitation, sending: sendingInvite } = useInvitations();
+  const { sendInvitation, sending: sendingInvite, createUserDirect, creatingUser } = useInvitations();
+  const [invitePassword, setInvitePassword] = useState("");
 
   useEffect(() => {
     if (!isSuperAdmin) {
@@ -461,12 +462,31 @@ export default function AdminOrganizations() {
     setInviteOrgId(org.id);
     setInviteOrgName(org.name);
     setInviteEmail("");
+    setInvitePassword("");
     setInviteDialogOpen(true);
   };
 
   const handleSendInvite = async () => {
     if (!inviteEmail.trim() || !inviteOrgId) return;
-    
+
+    // If password is provided, create user directly
+    if (invitePassword.trim()) {
+      const result = await createUserDirect({
+        email: inviteEmail.trim(),
+        password: invitePassword.trim(),
+        organization_id: inviteOrgId,
+        role: "tenant_admin",
+      });
+
+      if (result.success) {
+        setInviteDialogOpen(false);
+        setInviteEmail("");
+        setInvitePassword("");
+        fetchOrganizations();
+      }
+      return;
+    }
+
     const result = await sendInvitation({
       email: inviteEmail.trim(),
       organization_id: inviteOrgId,
@@ -477,6 +497,7 @@ export default function AdminOrganizations() {
     if (result.success) {
       setInviteDialogOpen(false);
       setInviteEmail("");
+      setInvitePassword("");
     }
   };
 
@@ -916,8 +937,20 @@ export default function AdminOrganizations() {
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Temporary Password <span className="text-muted-foreground font-normal">(optional)</span></label>
+                <Input
+                  type="password"
+                  placeholder="Set a password to create account instantly"
+                  value={invitePassword}
+                  onChange={(e) => setInvitePassword(e.target.value)}
+                />
                 <p className="text-xs text-muted-foreground">
-                  An invitation email will be sent to this address.
+                  {invitePassword.trim()
+                    ? "Account will be created immediately — share the credentials with the tenant directly."
+                    : "Leave blank to send an email invitation link instead."}
                 </p>
               </div>
             </div>
@@ -929,17 +962,17 @@ export default function AdminOrganizations() {
               <Button 
                 variant="gradient" 
                 onClick={handleSendInvite} 
-                disabled={sendingInvite || !inviteEmail.trim()}
+                disabled={(sendingInvite || creatingUser) || !inviteEmail.trim()}
               >
-                {sendingInvite ? (
+                {(sendingInvite || creatingUser) ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Sending...
+                    {creatingUser ? "Creating..." : "Sending..."}
                   </>
                 ) : (
                   <>
                     <Mail className="mr-2 h-4 w-4" />
-                    Send Invitation
+                    {invitePassword.trim() ? "Create Account" : "Send Invitation"}
                   </>
                 )}
               </Button>
