@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { FullPageLoader } from "@/components/ui/loading";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +31,7 @@ export default function ResetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [success, setSuccess] = useState(false);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<ResetPasswordData>({
@@ -47,19 +49,38 @@ export default function ResetPassword() {
   const watchPassword = form.watch("password");
 
   useEffect(() => {
-    // Check if we have access_token in URL (from reset email)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get("access_token");
-    const type = hashParams.get("type");
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setIsReady(true);
+      }
+    });
 
-    if (!accessToken || type !== "recovery") {
-      toast({
-        title: "Invalid Link",
-        description: "This password reset link is invalid or has expired.",
-        variant: "destructive",
+    // Also check if there's already a session (recovery may have already fired)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsReady(true);
+      }
+    });
+
+    // Timeout: if no recovery event after 5s, redirect
+    const timeout = setTimeout(() => {
+      setIsReady((ready) => {
+        if (!ready) {
+          toast({
+            title: "Invalid Link",
+            description: "This password reset link is invalid or has expired.",
+            variant: "destructive",
+          });
+          navigate("/forgot-password");
+        }
+        return ready;
       });
-      navigate("/forgot-password");
-    }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [navigate]);
 
   const onSubmit = async (data: ResetPasswordData) => {
@@ -101,6 +122,10 @@ export default function ResetPassword() {
       setIsLoading(false);
     }
   };
+
+  if (!isReady) {
+    return <FullPageLoader text="Verifying reset link..." />;
+  }
 
   if (success) {
     return (
