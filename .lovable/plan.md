@@ -1,32 +1,54 @@
 
 
-## Fix: Password Reset Link Redirecting Back to Forgot Password
+# Add Temporary Password Field to Invite Dialog
 
-### Problem
-When clicking "Reset Password" in the email, the authentication system exchanges the token automatically and fires a `PASSWORD_RECOVERY` event. However, the Reset Password page is looking for an `access_token` in the URL hash (an older pattern). Since it doesn't find one, it immediately redirects you back to the Forgot Password page.
+## Summary
+Add a "Temporary Password" field to the Invite User dialog so Super Admins can create a user account directly -- bypassing the email invitation flow entirely. The invited user can then log in immediately with their email and the temporary password you set.
 
-### Solution
-Update the Reset Password page to work with the modern auth flow by listening for the `PASSWORD_RECOVERY` event from the auth state change listener, instead of checking URL hash parameters.
+## How It Will Work
 
----
+1. In the **Invite User** dialog, a new optional "Temporary Password" field appears
+2. If you fill in a password, the system will:
+   - Create the user account immediately (email + password) via the backend
+   - Assign them to the correct organization and role
+   - Set their status to "active" (or "pending" if you prefer manual approval still)
+   - Skip the email invitation entirely
+3. If you leave the password blank, the current invite-link flow works as before
+4. You then share the email and temporary password with the tenant directly (in person, text, etc.)
 
-### Technical Changes
+## Changes Required
 
-**`src/pages/ResetPassword.tsx`**
-- Remove the `useEffect` that checks for `access_token` and `type=recovery` in the URL hash
-- Add a new `useEffect` that subscribes to `supabase.auth.onAuthStateChange` and listens for the `PASSWORD_RECOVERY` event
-- Track a `isReady` state that becomes `true` when a recovery session is detected
-- Show a loading state while waiting for the auth event
-- Only redirect to `/forgot-password` after a timeout if no recovery event is received (e.g., if someone navigates to `/reset-password` directly without a valid link)
+### 1. New Backend Function: `create-user-with-password`
+A new backend function that uses the admin API to:
+- Create the auth user with the provided email and password
+- Wait for the profile trigger to fire
+- Update the profile with the organization and status
+- Update the user role
+- Return success
 
-**`src/contexts/AuthContext.tsx`**
-- Ensure the `PASSWORD_RECOVERY` event is not intercepted or cleared before the Reset Password page can handle it (no changes expected, but will verify)
+This requires the service role key (already configured) to create users server-side.
 
-### How It Will Work After the Fix
-1. User clicks "Reset Password" in the email
-2. The auth system automatically exchanges the token and establishes a recovery session
-3. The Reset Password page detects the `PASSWORD_RECOVERY` event
-4. The form is displayed, and the user can set a new password
-5. `supabase.auth.updateUser({ password })` saves the new password
-6. User is redirected to the login page
+### 2. Update Invite User Dialog (`src/pages/AdminUsers.tsx`)
+- Add a "Temporary Password" input field below the email field
+- Add a toggle or note: "Set a temporary password to create the account immediately (bypasses email invite)"
+- When password is provided, call the new backend function instead of `send-invitation`
+- Show success message with the credentials to share
+
+### 3. Update `useInvitations` Hook (`src/hooks/useInvitations.ts`)
+- Add a new `createUserDirect` function that calls the new backend function
+- Keep the existing `sendInvitation` function for the email flow
+
+## Technical Details
+
+**New file:** `supabase/functions/create-user-with-password/index.ts`
+- Uses `supabase.auth.admin.createUser()` with `email_confirm: true` to skip email verification
+- Sets organization_id, role, and status on the profile
+- Validates password strength server-side
+- Only callable by authenticated super_admins and tenant_admins
+
+**Modified files:**
+- `src/pages/AdminUsers.tsx` -- add password field and conditional logic in the invite dialog
+- `src/hooks/useInvitations.ts` -- add `createUserDirect` method
+
+**No database changes needed** -- uses existing profiles, user_roles, and auth tables.
 
