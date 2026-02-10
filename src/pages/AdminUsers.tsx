@@ -54,6 +54,8 @@ export default function AdminUsers() {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [newRole, setNewRole] = useState<string>("");
   const [newStatus, setNewStatus] = useState<string>("");
   const [newOrganizationId, setNewOrganizationId] = useState<string>("");
@@ -200,6 +202,33 @@ export default function AdminUsers() {
       });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setDeleting(true);
+    try {
+      // Delete user role
+      await supabase.from("user_roles").delete().eq("user_id", selectedUser.user_id);
+      // Delete profile
+      await supabase.from("profiles").delete().eq("user_id", selectedUser.user_id);
+
+      toast({
+        title: "User Deleted",
+        description: `${selectedUser.email} has been removed.`,
+      });
+      setConfirmDeleteOpen(false);
+      setDialogOpen(false);
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete user",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -472,7 +501,16 @@ export default function AdminUsers() {
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {isSuperAdmin && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  className="sm:mr-auto"
+                >
+                  Delete User
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
@@ -484,6 +522,33 @@ export default function AdminUsers() {
                   </>
                 ) : (
                   "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Confirm Delete Dialog */}
+        <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete <strong>{selectedUser?.email}</strong>? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteUser} disabled={deleting}>
+                {deleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Delete User"
                 )}
               </Button>
             </DialogFooter>
