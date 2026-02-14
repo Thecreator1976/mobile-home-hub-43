@@ -2,8 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import { useEffect, useState } from "react";
-import { requirePermission } from "@/lib/permissions";
+import { useEffect } from "react";
 
 export type LeadStatus = "new" | "contacted" | "offer_made" | "under_contract" | "closed" | "lost";
 export type HomeType = "single" | "double" | "triple";
@@ -59,15 +58,6 @@ export interface CreateLeadInput {
   notes?: string;
 }
 
-// Helper to get user's organization_id
-const getUserOrganizationId = async (userId: string): Promise<string | null> => {
-  const { data } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('user_id', userId)
-    .single();
-  return data?.organization_id || null;
-};
 
 // Helper to trigger webhooks via edge function
 async function triggerLeadWebhooks(event: string, lead: SellerLead, oldStatus?: string, newStatus?: string) {
@@ -88,14 +78,6 @@ async function triggerLeadWebhooks(event: string, lead: SellerLead, oldStatus?: 
 export function useSellerLeads() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [userOrgId, setUserOrgId] = useState<string | null>(null);
-
-  // Fetch user's organization ID
-  useEffect(() => {
-    if (user?.id) {
-      getUserOrganizationId(user.id).then(setUserOrgId);
-    }
-  }, [user?.id]);
 
   // Set up real-time subscription
   useEffect(() => {
@@ -138,30 +120,28 @@ export function useSellerLeads() {
   const createLead = useMutation({
     mutationFn: async (input: CreateLeadInput) => {
       if (!user?.id) throw new Error('User not authenticated');
-      
-      // Server-side permission check - cast table name to bypass type checking
-      const permission = await requirePermission("seller_leads" as any, "insert");
-      if (!permission.allowed) {
-        throw new Error(permission.reason || "Permission denied");
-      }
 
-      const organizationId = userOrgId || await getUserOrganizationId(user.id);
-      if (!organizationId) throw new Error('User organization not found');
-
-      // Insert directly using the base table with 'any' to bypass type checking
-      // since seller_leads table is not exposed in types
-      const insertData = {
-        ...input,
-        created_by: user.id,
-        org_id: organizationId,
-        organization_id: organizationId,
-      };
-
-      const { data, error } = await supabase
-        .from("seller_leads" as any)
-        .insert(insertData)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc("insert_seller_lead" as any, {
+        p_name: input.name,
+        p_address: input.address,
+        p_asking_price: input.asking_price,
+        p_phone: input.phone || null,
+        p_email: input.email || null,
+        p_city: input.city || null,
+        p_state: input.state || null,
+        p_zip: input.zip || null,
+        p_home_type: input.home_type || 'single',
+        p_year_built: input.year_built || null,
+        p_condition: input.condition || null,
+        p_length_ft: input.length_ft || null,
+        p_width_ft: input.width_ft || null,
+        p_park_owned: input.park_owned ?? false,
+        p_lot_rent: input.lot_rent || null,
+        p_owed_amount: input.owed_amount || null,
+        p_estimated_value: input.estimated_value || null,
+        p_target_offer: input.target_offer || null,
+        p_notes: input.notes || null,
+      });
 
       if (error) throw error;
       return data as unknown as SellerLead;
@@ -172,7 +152,6 @@ export function useSellerLeads() {
         title: "Lead Created",
         description: "The seller lead has been added successfully.",
       });
-      // Trigger webhooks for new lead
       triggerLeadWebhooks("new_lead", data);
     },
     onError: (error) => {
@@ -186,13 +165,7 @@ export function useSellerLeads() {
 
   const updateLead = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<SellerLead> & { id: string }) => {
-      // Server-side permission check with record ID - cast to bypass type checking
-      const permission = await requirePermission("seller_leads" as any, "update", id);
-      if (!permission.allowed) {
-        throw new Error(permission.reason || "Permission denied");
-      }
-
-      // Get current lead to check for status change using secure view
+      // Get current lead to check for status change
       const { data: currentLead } = await supabase
         .from("secure_seller_leads")
         .select("status")
@@ -200,17 +173,30 @@ export function useSellerLeads() {
         .single();
       
       const oldStatus = currentLead?.status;
-      
-      // Remove org_id from updates
-      const { org_id, organization_id, ...safeUpdates } = updates;
-      
-      // Update using base table with 'any' to bypass type checking
-      const { data, error } = await supabase
-        .from("seller_leads" as any)
-        .update(safeUpdates)
-        .eq("id", id)
-        .select()
-        .single();
+
+      const { data, error } = await supabase.rpc("update_seller_lead" as any, {
+        p_id: id,
+        p_name: updates.name || null,
+        p_address: updates.address || null,
+        p_asking_price: updates.asking_price || null,
+        p_phone: updates.phone || null,
+        p_email: updates.email || null,
+        p_city: updates.city || null,
+        p_state: updates.state || null,
+        p_zip: updates.zip || null,
+        p_home_type: updates.home_type || null,
+        p_year_built: updates.year_built || null,
+        p_condition: updates.condition || null,
+        p_length_ft: updates.length_ft || null,
+        p_width_ft: updates.width_ft || null,
+        p_park_owned: updates.park_owned ?? null,
+        p_lot_rent: updates.lot_rent || null,
+        p_owed_amount: updates.owed_amount || null,
+        p_estimated_value: updates.estimated_value || null,
+        p_target_offer: updates.target_offer || null,
+        p_status: updates.status || null,
+        p_notes: updates.notes || null,
+      });
 
       if (error) throw error;
       return { lead: data as unknown as SellerLead, oldStatus, newStatus: updates.status };
@@ -221,7 +207,6 @@ export function useSellerLeads() {
         title: "Lead Updated",
         description: "The seller lead has been updated successfully.",
       });
-      // Trigger webhooks if status changed
       if (newStatus && oldStatus !== newStatus) {
         triggerLeadWebhooks("status_change", lead, oldStatus, newStatus);
       }
@@ -237,16 +222,9 @@ export function useSellerLeads() {
 
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
-      // Server-side permission check with record ID - cast to bypass type checking
-      const permission = await requirePermission("seller_leads" as any, "delete", id);
-      if (!permission.allowed) {
-        throw new Error(permission.reason || "Permission denied");
-      }
-
-      const { error } = await supabase
-        .from("seller_leads" as any)
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.rpc("delete_seller_lead" as any, {
+        p_id: id,
+      });
 
       if (error) throw error;
     },

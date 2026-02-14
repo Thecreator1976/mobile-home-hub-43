@@ -1937,6 +1937,7 @@ export type Database = {
           user2_count: number
         }[]
       }
+      delete_seller_lead: { Args: { p_id: string }; Returns: undefined }
       generate_access_report: {
         Args: never
         Returns: {
@@ -1986,6 +1987,30 @@ export type Database = {
             }
             Returns: boolean
           }
+      insert_seller_lead: {
+        Args: {
+          p_address: string
+          p_asking_price: number
+          p_city?: string
+          p_condition?: number
+          p_email?: string
+          p_estimated_value?: number
+          p_home_type?: Database["public"]["Enums"]["home_type"]
+          p_length_ft?: number
+          p_lot_rent?: number
+          p_name: string
+          p_notes?: string
+          p_owed_amount?: number
+          p_park_owned?: boolean
+          p_phone?: string
+          p_state?: string
+          p_target_offer?: number
+          p_width_ft?: number
+          p_year_built?: number
+          p_zip?: string
+        }
+        Returns: Json
+      }
       is_admin_or_agent:
         | { Args: never; Returns: boolean }
         | { Args: { _user_id: string }; Returns: boolean }
@@ -2022,6 +2047,32 @@ export type Database = {
           details: string
           test_result: string
         }[]
+      }
+      update_seller_lead: {
+        Args: {
+          p_address?: string
+          p_asking_price?: number
+          p_city?: string
+          p_condition?: number
+          p_email?: string
+          p_estimated_value?: number
+          p_home_type?: Database["public"]["Enums"]["home_type"]
+          p_id: string
+          p_length_ft?: number
+          p_lot_rent?: number
+          p_name?: string
+          p_notes?: string
+          p_owed_amount?: number
+          p_park_owned?: boolean
+          p_phone?: string
+          p_state?: string
+          p_status?: Database["public"]["Enums"]["lead_status"]
+          p_target_offer?: number
+          p_width_ft?: number
+          p_year_built?: number
+          p_zip?: string
+        }
+        Returns: Json
       }
       validate_email: { Args: { email: string }; Returns: boolean }
       validate_phone: { Args: { phone: string }; Returns: boolean }
