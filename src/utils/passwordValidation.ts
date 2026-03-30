@@ -40,7 +40,8 @@ export function validatePassword(password: string): PasswordValidationResult {
     };
   }
 
-  // Use zxcvbn for advanced checking
+  // Use zxcvbn for advanced checking (dynamically loaded)
+  const { default: zxcvbn } = await import('zxcvbn');
   const result = zxcvbn(password);
   
   return {
