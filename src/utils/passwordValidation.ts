@@ -5,7 +5,7 @@ export interface PasswordValidationResult {
   suggestions: string[];
 }
 
-export function validatePassword(password: string): PasswordValidationResult {
+export async function validatePassword(password: string): Promise<PasswordValidationResult> {
   if (!password) {
     return {
       isValid: false,
