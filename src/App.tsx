@@ -73,10 +73,10 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/accept-invite" element={<AcceptInvite />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/accept-invite" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><AcceptInvite /></Suspense>} />
+              <Route path="/forgot-password" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><ForgotPassword /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><ResetPassword /></Suspense>} />
+              <Route path="/verify-email" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><VerifyEmail /></Suspense>} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/payment-required" element={<PaymentRequired />} />
 
