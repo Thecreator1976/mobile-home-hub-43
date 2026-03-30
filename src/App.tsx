@@ -13,10 +13,10 @@ import { queryClient } from "@/lib/queryClient";
 // Eagerly loaded pages (critical path)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import AcceptInvite from "./pages/AcceptInvite";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 import PendingApproval from "./pages/PendingApproval";
 import PaymentRequired from "./pages/PaymentRequired";
 import NotFound from "./pages/NotFound";
