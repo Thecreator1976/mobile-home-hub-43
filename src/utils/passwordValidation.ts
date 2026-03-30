@@ -1,5 +1,3 @@
-import zxcvbn from 'zxcvbn';
-
 export interface PasswordValidationResult {
   isValid: boolean;
   score: number; // 0-4
