@@ -13,10 +13,10 @@ import { queryClient } from "@/lib/queryClient";
 // Eagerly loaded pages (critical path)
 import Index from "./pages/Index";
 import Login from "./pages/Login";
-import AcceptInvite from "./pages/AcceptInvite";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import VerifyEmail from "./pages/VerifyEmail";
+const AcceptInvite = lazy(() => import("./pages/AcceptInvite"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
 import PendingApproval from "./pages/PendingApproval";
 import PaymentRequired from "./pages/PaymentRequired";
 import NotFound from "./pages/NotFound";
@@ -73,10 +73,10 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/accept-invite" element={<AcceptInvite />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/accept-invite" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><AcceptInvite /></Suspense>} />
+              <Route path="/forgot-password" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><ForgotPassword /></Suspense>} />
+              <Route path="/reset-password" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><ResetPassword /></Suspense>} />
+              <Route path="/verify-email" element={<Suspense fallback={<FullPageLoader text="Loading..." />}><VerifyEmail /></Suspense>} />
               <Route path="/pending-approval" element={<PendingApproval />} />
               <Route path="/payment-required" element={<PaymentRequired />} />
 

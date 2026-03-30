@@ -33,7 +33,7 @@ export function PasswordStrengthIndicator({
     }
 
     // Local validation
-    const localValidation = validatePassword(password);
+    const localValidation = await validatePassword(password);
     setValidation(localValidation);
 
     // Check against breaches if enabled and password looks valid

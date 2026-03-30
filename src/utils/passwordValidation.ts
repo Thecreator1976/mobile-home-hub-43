@@ -1,5 +1,3 @@
-import zxcvbn from 'zxcvbn';
-
 export interface PasswordValidationResult {
   isValid: boolean;
   score: number; // 0-4
@@ -7,7 +5,7 @@ export interface PasswordValidationResult {
   suggestions: string[];
 }
 
-export function validatePassword(password: string): PasswordValidationResult {
+export async function validatePassword(password: string): Promise<PasswordValidationResult> {
   if (!password) {
     return {
       isValid: false,
@@ -42,7 +40,8 @@ export function validatePassword(password: string): PasswordValidationResult {
     };
   }
 
-  // Use zxcvbn for advanced checking
+  // Use zxcvbn for advanced checking (dynamically loaded)
+  const { default: zxcvbn } = await import('zxcvbn');
   const result = zxcvbn(password);
   
   return {
