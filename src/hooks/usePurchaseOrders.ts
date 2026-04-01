@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -114,7 +115,7 @@ export function usePurchaseOrders() {
         po_number: input.po_number,
         vendor: input.vendor,
         seller_lead_id: input.seller_lead_id,
-        items: input.items as unknown,
+        items: input.items as unknown as Json,
         total_amount: input.total_amount,
         due_date: input.due_date,
         notes: input.notes,
@@ -151,8 +152,11 @@ export function usePurchaseOrders() {
   const updatePO = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PurchaseOrder> & { id: string }) => {
       // Remove org_id and seller_lead from updates
-      const { org_id, organization_id, seller_lead, ...safeUpdates } = updates;
-      const updateData = { ...safeUpdates };
+      const { org_id, organization_id, seller_lead, items, ...restUpdates } = updates;
+      const updateData = {
+        ...restUpdates,
+        ...(items ? { items: items as unknown as Json } : {}),
+      };
       
       const { data, error } = await supabase
         .from("purchase_orders")

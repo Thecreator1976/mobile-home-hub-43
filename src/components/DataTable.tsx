@@ -42,7 +42,7 @@ interface DataTableProps<T> {
 
 type SortDirection = "asc" | "desc" | null;
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable<T extends { id?: string | number }>({
   data,
   columns,
   isLoading = false,
@@ -213,7 +213,7 @@ export function DataTable<T extends Record<string, unknown>>({
             ) : (
               paginatedData.map((item, index) => (
                 <TableRow
-                  key={item.id || index}
+                  key={item.id ?? index}
                   className={cn(
                     onRowClick && "cursor-pointer hover:bg-muted/50"
                   )}
@@ -226,7 +226,7 @@ export function DataTable<T extends Record<string, unknown>>({
                     >
                       {column.render
                         ? column.render(item)
-                        : item[column.key as keyof T]}
+                        : String(item[column.key as keyof T] ?? "")}
                     </TableCell>
                   ))}
                 </TableRow>

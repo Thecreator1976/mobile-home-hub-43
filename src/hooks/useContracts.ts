@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,7 +13,7 @@ export interface Contract {
   content: string;
   status: string;
   contract_type: string | null;
-  offer_data: Record<string, unknown> | null;
+  offer_data: Json | null;
   docusign_envelope_id: string | null;
   sent_at: string | null;
   signed_at: string | null;
@@ -49,7 +50,7 @@ export interface CreateContractInput {
   content: string;
   status?: string;
   contract_type?: string;
-  offer_data?: Record<string, unknown>;
+  offer_data?: Json;
 }
 
 // Helper to get user's organization_id
