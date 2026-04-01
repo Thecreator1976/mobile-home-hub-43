@@ -17,6 +17,18 @@ import { ArrowLeft, Save, Plus, Trash2, Calendar as CalendarIcon, Building, File
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+type FormDataState = {
+  poNumber: string;
+  sellerLeadId: string;
+  vendor: string;
+  dueDate: Date;
+  notes: string;
+};
+
+type FormDataField = keyof FormDataState;
+type FormDataValue = FormDataState[FormDataField];
+type POItemWithId = POItem & { id: string };
+
 export default function NewPurchaseOrder() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -24,7 +36,7 @@ export default function NewPurchaseOrder() {
   const { createPO } = usePurchaseOrders();
   const { leads } = useSellerLeads();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormDataState>({
     poNumber: generatePONumber(),
     sellerLeadId: searchParams.get("leadId") || "",
     vendor: "",
@@ -32,11 +44,11 @@ export default function NewPurchaseOrder() {
     notes: "",
   });
 
-  const [items, setItems] = useState<(POItem & { id: string })[]>([
+  const [items, setItems] = useState<POItemWithId[]>([
     { id: "1", description: "", quantity: 1, unitPrice: 0, total: 0 },
   ]);
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = <K extends FormDataField>(field: K, value: FormDataState[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -53,11 +65,11 @@ export default function NewPurchaseOrder() {
     }
   };
 
-  const updateItem = (id: string, field: keyof POItem, value: any) => {
+  const updateItem = <K extends keyof POItem>(id: string, field: K, value: POItem[K]) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === id) {
-          const updated = { ...item, [field]: value };
+          const updated: POItemWithId = { ...item, [field]: value } as POItemWithId;
           if (field === "quantity" || field === "unitPrice") {
             updated.total = updated.quantity * updated.unitPrice;
           }
@@ -95,7 +107,7 @@ export default function NewPurchaseOrder() {
       });
 
       navigate("/purchase-orders");
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -103,7 +115,6 @@ export default function NewPurchaseOrder() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
@@ -116,7 +127,6 @@ export default function NewPurchaseOrder() {
 
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 lg:grid-cols-3">
-            {/* Left Column */}
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -154,15 +164,12 @@ export default function NewPurchaseOrder() {
 
                   <div className="space-y-2">
                     <Label>Related Lead</Label>
-                    <Select
-                      value={formData.sellerLeadId}
-                      onValueChange={(value) => handleInputChange("sellerLeadId", value)}
-                    >
+                    <Select value={formData.sellerLeadId} onValueChange={(value) => handleInputChange("sellerLeadId", value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select lead (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {leads.map((lead) => (
                           <SelectItem key={lead.id} value={lead.id}>
                             {lead.name}
@@ -176,10 +183,7 @@ export default function NewPurchaseOrder() {
                     <Label>Due Date</Label>
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn("w-full justify-start text-left font-normal")}
-                        >
+                        <Button variant="outline" className={cn("w-full justify-start text-left font-normal")}>
                           <CalendarIcon className="mr-2 h-4 w-4" />
                           {format(formData.dueDate, "PPP")}
                         </Button>
@@ -217,7 +221,6 @@ export default function NewPurchaseOrder() {
               </Card>
             </div>
 
-            {/* Right Column */}
             <div className="lg:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
@@ -313,7 +316,6 @@ export default function NewPurchaseOrder() {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="flex justify-between mt-6">
             <Button type="button" variant="outline" onClick={() => navigate(-1)}>
               Cancel

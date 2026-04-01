@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import animate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -14,7 +15,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -75,9 +76,9 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        'glow': 'var(--shadow-glow)',
-        'card': 'var(--shadow-md)',
-        'card-hover': 'var(--shadow-lg)',
+        glow: "var(--shadow-glow)",
+        card: "var(--shadow-md)",
+        "card-hover": "var(--shadow-lg)",
       },
       keyframes: {
         "accordion-down": {
@@ -105,5 +106,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [animate],
 } satisfies Config;

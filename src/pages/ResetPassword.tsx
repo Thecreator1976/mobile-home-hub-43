@@ -112,10 +112,11 @@ export default function ResetPassword() {
       setTimeout(() => {
         navigate("/login");
       }, 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to reset password.";
       toast({
         title: "Error",
-        description: error.message || "Failed to reset password.",
+        description: message,
         variant: "destructive",
       });
     } finally {

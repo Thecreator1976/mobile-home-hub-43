@@ -196,8 +196,7 @@ export default function Settings() {
 
       const { error } = await supabase
         .from("organizations")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update({ settings: updatedSettings as any })
+        .update({ settings: updatedSettings as never })
         .eq("id", effectiveOrgId);
 
       if (error) throw error;
@@ -207,10 +206,11 @@ export default function Settings() {
         description: "Service charges have been updated successfully.",
       });
       setGeneralDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to save settings";
       toast({
         title: "Error",
-        description: error?.message || "Failed to save settings",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -302,10 +302,11 @@ export default function Settings() {
         description: `${member.email} status changed to ${newStatus}.`,
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update member";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update member",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -329,10 +330,11 @@ export default function Settings() {
         description: `${member.email} role changed to ${newRole}.`,
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update role";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update role",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -355,10 +357,11 @@ export default function Settings() {
         description: "The invitation has been cancelled.",
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to cancel invitation";
       toast({
         title: "Error",
-        description: error?.message || "Failed to cancel invitation",
+        description: message,
         variant: "destructive",
       });
     }

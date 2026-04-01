@@ -84,9 +84,17 @@ export default function AcceptInvite() {
         return;
       }
 
+      const organizationName =
+        typeof invite.organizations === "object" &&
+        invite.organizations !== null &&
+        "name" in invite.organizations &&
+        typeof invite.organizations.name === "string"
+          ? invite.organizations.name
+          : "Unknown Organization";
+
       setInvitation({
         ...invite,
-        organization_name: (invite.organizations as any)?.name || "Unknown Organization",
+        organization_name: organizationName,
       });
       setIsLoading(false);
     } catch (err) {
@@ -158,9 +166,18 @@ export default function AcceptInvite() {
       }
 
       // Update user role
+      const allowedRole =
+        invitation.role === "super_admin" ||
+        invitation.role === "tenant_admin" ||
+        invitation.role === "admin" ||
+        invitation.role === "agent" ||
+        invitation.role === "viewer"
+          ? invitation.role
+          : "viewer";
+
       const { error: roleError } = await supabase
         .from("user_roles")
-        .update({ role: invitation.role as any })
+        .update({ role: allowedRole })
         .eq("user_id", authData.user.id);
 
       if (roleError) {
@@ -187,11 +204,12 @@ export default function AcceptInvite() {
 
       // Navigate to pending approval page
       navigate("/pending-approval", { replace: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error accepting invitation:", err);
+      const message = err instanceof Error ? err.message : "Failed to create account. Please try again.";
       toast({
         title: "Error",
-        description: err.message || "Failed to create account. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {

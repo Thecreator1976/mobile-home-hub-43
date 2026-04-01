@@ -9,7 +9,7 @@ export interface ExternalIntegration {
   user_id: string;
   service_name: string;
   webhook_url: string | null;
-  config: Record<string, any>;
+  config: Record<string, unknown>;
   is_active: boolean;
   last_sync: string | null;
   created_at: string;
@@ -35,7 +35,7 @@ export interface SocialPost {
 export interface CreateIntegrationInput {
   service_name: string;
   webhook_url?: string;
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
 }
 
 export function useIntegrations() {
@@ -141,7 +141,7 @@ export function useIntegrations() {
 
   const triggerWebhook = async (
     webhookUrl: string,
-    payload: Record<string, any>
+    payload: Record<string, unknown>
   ): Promise<boolean> => {
     try {
       await fetch(webhookUrl, {

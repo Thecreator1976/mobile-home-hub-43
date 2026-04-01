@@ -20,6 +20,8 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isTenantAdmin: boolean;
   isLoading: boolean;
+  sessionExpired: boolean;
+  setSessionExpired: React.Dispatch<React.SetStateAction<boolean>>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -229,10 +231,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         signOut,
-        // @ts-ignore - expose for login page
-        sessionExpired,
-        // @ts-ignore - expose for login page to reset flag
-        setSessionExpired,
+                sessionExpired,
+                setSessionExpired,
       }}
     >
       {children}

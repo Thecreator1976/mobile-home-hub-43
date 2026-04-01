@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Home, Mail, Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { Home, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/lib/validations";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { z } from "zod";
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -18,13 +17,11 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  // @ts-ignore - sessionExpired and setSessionExpired are dynamically added
   const { signIn, user, isLoading: authLoading, sessionExpired, setSessionExpired } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const from = (location.state as { from?: string })?.from || "/dashboard";
-  
-  // Show toast and clear expired flag when detected
+
   useEffect(() => {
     if (sessionExpired) {
       toast({
@@ -32,10 +29,7 @@ export default function Login() {
         description: "Your session has expired. Please log in again.",
         variant: "destructive",
       });
-      // Reset the flag after showing
-      if (setSessionExpired) {
-        setSessionExpired(false);
-      }
+      setSessionExpired(false);
     }
   }, [sessionExpired, setSessionExpired]);
 
@@ -47,7 +41,6 @@ export default function Login() {
     },
   });
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user && !authLoading) {
       navigate(from, { replace: true });
@@ -66,13 +59,14 @@ export default function Login() {
         variant: "destructive",
       });
       setIsLoading(false);
-    } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
-      navigate(from, { replace: true });
+      return;
     }
+
+    toast({
+      title: "Welcome back!",
+      description: "You have successfully logged in.",
+    });
+    navigate(from, { replace: true });
   };
 
   if (authLoading) {
@@ -86,7 +80,6 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <div className="w-full max-w-md animate-fade-in">
-        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
             <Home className="h-6 w-6 text-primary-foreground" />
@@ -104,6 +97,7 @@ export default function Login() {
               Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -136,10 +130,7 @@ export default function Login() {
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel>Password</FormLabel>
-                        <Link 
-                          to="/forgot-password" 
-                          className="text-sm text-primary hover:underline"
-                        >
+                        <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -175,6 +166,7 @@ export default function Login() {
               </form>
             </Form>
           </CardContent>
+
           <CardFooter className="flex flex-col space-y-4">
             <p className="text-sm text-muted-foreground text-center">
               Need access?{" "}

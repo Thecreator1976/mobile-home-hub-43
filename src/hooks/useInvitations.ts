@@ -47,14 +47,15 @@ export function useInvitations() {
       });
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error sending invitation:", error);
+      const message = error instanceof Error ? error.message : "Failed to send invitation";
       toast({
         title: "Error",
-        description: error.message || "Failed to send invitation",
+        description: message,
         variant: "destructive",
       });
-      return { success: false, error: error.message };
+      return { success: false, error: message };
     } finally {
       setSending(false);
     }
@@ -79,14 +80,15 @@ export function useInvitations() {
       });
 
       return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error creating user:", error);
+      const message = error instanceof Error ? error.message : "Failed to create user";
       toast({
         title: "Error",
-        description: error.message || "Failed to create user",
+        description: message,
         variant: "destructive",
       });
-      return { success: false, error: error.message };
+      return { success: false, error: message };
     } finally {
       setCreatingUser(false);
     }

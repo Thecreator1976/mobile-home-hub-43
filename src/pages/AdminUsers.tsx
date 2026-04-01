@@ -119,7 +119,7 @@ export default function AdminUsers() {
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles and org info
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile: any) => {
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
         const userRole = roles?.find((r) => r.user_id === profile.user_id);
         return {
           id: profile.id,

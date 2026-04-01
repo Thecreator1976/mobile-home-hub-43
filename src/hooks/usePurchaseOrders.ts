@@ -125,7 +125,7 @@ export function usePurchaseOrders() {
 
       const { data, error } = await supabase
         .from("purchase_orders")
-        .insert(insertData as any)
+        .insert(insertData)
         .select()
         .single();
 
@@ -152,7 +152,7 @@ export function usePurchaseOrders() {
     mutationFn: async ({ id, ...updates }: Partial<PurchaseOrder> & { id: string }) => {
       // Remove org_id and seller_lead from updates
       const { org_id, organization_id, seller_lead, ...safeUpdates } = updates;
-      const updateData: any = { ...safeUpdates };
+      const updateData = { ...safeUpdates };
       
       const { data, error } = await supabase
         .from("purchase_orders")

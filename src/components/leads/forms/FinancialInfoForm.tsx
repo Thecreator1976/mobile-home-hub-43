@@ -14,7 +14,7 @@ interface FinancialInfoData {
 
 interface FinancialInfoFormProps {
   data: FinancialInfoData;
-  onChange: (field: string, value: any) => void;
+  onChange: (field: string, value: string | number | boolean | null) => void;
   calculatedEstimatedValue?: number;
   calculatedTargetOffer?: number;
 }
