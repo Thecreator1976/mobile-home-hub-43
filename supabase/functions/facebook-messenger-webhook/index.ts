@@ -13,7 +13,7 @@ function generateSafeReferenceId(): string {
 // Safe error handler - logs securely without exposing sensitive data
 function safeErrorHandler(error: unknown, context?: string): { error: string; referenceId: string } {
   const referenceId = generateSafeReferenceId();
-  
+
   // Log safely without sensitive data
   console.error("Safe error log:", {
     context,
@@ -23,7 +23,7 @@ function safeErrorHandler(error: unknown, context?: string): { error: string; re
     timestamp: new Date().toISOString(),
     // Never log: full error message, stack traces, request bodies, user data
   });
-  
+
   // Return safe error to client
   return {
     error: "An error occurred",
@@ -34,23 +34,19 @@ function safeErrorHandler(error: unknown, context?: string): { error: string; re
 // HMAC-SHA256 signature verification
 async function verifySignature(body: string, signature: string, secret: string): Promise<boolean> {
   const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+  ]);
   const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
   const hashArray = Array.from(new Uint8Array(signatureBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
   const expectedSignature = `sha256=${hashHex}`;
-  
+
   // Use timing-safe comparison to prevent timing attacks
   if (signature.length !== expectedSignature.length) {
     return false;
   }
-  
+
   let result = 0;
   for (let i = 0; i < signature.length; i++) {
     result |= signature.charCodeAt(i) ^ expectedSignature.charCodeAt(i);
@@ -92,7 +88,7 @@ Deno.serve(async (req) => {
     // POST request: Handle incoming messages
     if (req.method === "POST") {
       const appSecret = Deno.env.get("FACEBOOK_APP_SECRET");
-      
+
       if (!appSecret) {
         console.error("Webhook configuration error: app secret missing");
         return new Response("Webhook not configured", { status: 500, headers: corsHeaders });
@@ -125,7 +121,7 @@ Deno.serve(async (req) => {
       if (data.object === "page" && data.entry) {
         for (const entry of data.entry) {
           const messaging = entry.messaging || [];
-          
+
           for (const event of messaging) {
             const senderId = event.sender?.id;
             const messageText = event.message?.text;
@@ -137,25 +133,27 @@ Deno.serve(async (req) => {
             }
 
             // Log message received without exposing content
-            console.log(`Processing message from sender (ID hidden for privacy)`);
+            console.log("Processing message from sender (ID hidden for privacy)");
 
             // Find or create conversation
-            let { data: conversation, error: convError } = await supabase
+            const { data: existingConversation, error: convError } = await supabase
               .from("messenger_conversations")
               .select("*")
               .eq("facebook_user_id", senderId)
               .single();
 
+            let conversation = existingConversation;
+
             if (convError && convError.code === "PGRST116") {
               // Conversation doesn't exist, create one
               // Resolve organization from the Facebook Page ID in the webhook entry
               const pageId = entry.id;
-              
+
               if (!pageId) {
                 console.error("Missing page ID in webhook entry - cannot determine organization");
                 continue;
               }
-              
+
               // Look up organization by Facebook Page ID from integrations
               const { data: integration, error: integrationError } = await supabase
                 .from("external_integrations")
@@ -164,14 +162,14 @@ Deno.serve(async (req) => {
                 .eq("is_active", true)
                 .filter("config->>page_id", "eq", pageId)
                 .single();
-              
+
               if (integrationError || !integration?.organization_id) {
                 console.error("No active Facebook Messenger integration found for this page");
                 continue;
               }
-              
+
               const orgId = integration.organization_id;
-              
+
               const { data: newConv, error: createError } = await supabase
                 .from("messenger_conversations")
                 .insert({
@@ -202,15 +200,13 @@ Deno.serve(async (req) => {
             }
 
             // Store the message
-            const { error: msgError } = await supabase
-              .from("messenger_messages")
-              .insert({
-                conversation_id: conversation.id,
-                direction: "inbound",
-                content: messageText,
-                message_type: "text",
-                facebook_message_id: messageId,
-              });
+            const { error: msgError } = await supabase.from("messenger_messages").insert({
+              conversation_id: conversation.id,
+              direction: "inbound",
+              content: messageText,
+              message_type: "text",
+              facebook_message_id: messageId,
+            });
 
             if (msgError) {
               console.error("Error storing message:", msgError);
