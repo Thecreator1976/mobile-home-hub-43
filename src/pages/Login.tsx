@@ -18,12 +18,11 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
-  // @ts-ignore - sessionExpired and setSessionExpired are dynamically added
   const { signIn, user, isLoading: authLoading, sessionExpired, setSessionExpired } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const from = (location.state as { from?: string })?.from || "/dashboard";
-  
+
   // Show toast and clear expired flag when detected
   useEffect(() => {
     if (sessionExpired) {
@@ -100,9 +99,7 @@ export default function Login() {
         <Card className="shadow-xl border-border/50">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access your account
-            </CardDescription>
+            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -136,10 +133,7 @@ export default function Login() {
                     <FormItem>
                       <div className="flex items-center justify-between">
                         <FormLabel>Password</FormLabel>
-                        <Link 
-                          to="/forgot-password" 
-                          className="text-sm text-primary hover:underline"
-                        >
+                        <Link to="/forgot-password" className="text-sm text-primary hover:underline">
                           Forgot password?
                         </Link>
                       </div>
@@ -178,9 +172,7 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-4">
             <p className="text-sm text-muted-foreground text-center">
               Need access?{" "}
-              <span className="text-foreground font-medium">
-                Contact your administrator for an invitation.
-              </span>
+              <span className="text-foreground font-medium">Contact your administrator for an invitation.</span>
             </p>
           </CardFooter>
         </Card>
