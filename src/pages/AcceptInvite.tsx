@@ -36,16 +36,7 @@ export default function AcceptInvite() {
     setIsPasswordValid(isValid);
   }, []);
 
-  useEffect(() => {
-    if (!token) {
-      setError("No invitation token provided");
-      setIsLoading(false);
-      return;
-    }
-    validateInvitation();
-  }, [token]);
-
-  const validateInvitation = async () => {
+  const validateInvitation = useCallback(async () => {
     try {
       // Fetch invitation by token
       const { data: invite, error: inviteError } = await supabase
@@ -102,7 +93,16 @@ export default function AcceptInvite() {
       setError("An error occurred while validating the invitation");
       setIsLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) {
+      setError("No invitation token provided");
+      setIsLoading(false);
+      return;
+    }
+    validateInvitation();
+  }, [token, validateInvitation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
