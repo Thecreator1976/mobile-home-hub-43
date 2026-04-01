@@ -87,7 +87,7 @@ Best regards`;
     } else if (selectedTemplate === "custom") {
       setMessage(defaultMessage);
     }
-  }, [selectedTemplate, templates, lead]);
+  }, [selectedTemplate, templates, lead, applyTemplate, defaultMessage]);
 
   if (!openPhoneIntegration?.webhook_url) {
     return null;

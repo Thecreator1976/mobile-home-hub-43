@@ -66,13 +66,6 @@ export default function AdminUsers() {
   const [inviteRole, setInviteRole] = useState<string>("agent");
   const { sendInvitation, sending: sendingInvite } = useInvitations();
 
-  useEffect(() => {
-    fetchUsers();
-    if (isSuperAdmin) {
-      fetchOrganizations();
-    }
-  }, [isSuperAdmin, fetchUsers]);
-
   const fetchOrganizations = async () => {
     try {
       const { data, error } = await supabase
@@ -142,6 +135,13 @@ export default function AdminUsers() {
       setIsLoading(false);
     }
   }, [isSuperAdmin, userOrganization]);
+
+  useEffect(() => {
+    fetchUsers();
+    if (isSuperAdmin) {
+      fetchOrganizations();
+    }
+  }, [isSuperAdmin, fetchUsers]);
 
   const handleEditUser = (user: UserWithRole) => {
     setSelectedUser(user);

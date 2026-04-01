@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,10 +135,10 @@ export default function Settings() {
       };
       fetchOrgs();
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, selectedOrgId]);
 
   // Load organization settings
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     if (!effectiveOrgId) return;
     
     setLoadingSettings(true);
@@ -160,7 +160,7 @@ export default function Settings() {
     } finally {
       setLoadingSettings(false);
     }
-  };
+  }, [effectiveOrgId]);
 
   // Save service charges
   const handleSaveServiceCharges = async () => {
@@ -219,7 +219,7 @@ export default function Settings() {
   };
 
   // Load team members
-  const loadTeamMembers = async () => {
+  const loadTeamMembers = useCallback(async () => {
     if (!effectiveOrgId) return;
     
     setLoadingTeam(true);
@@ -284,7 +284,7 @@ export default function Settings() {
     } finally {
       setLoadingTeam(false);
     }
-  };
+  }, [effectiveOrgId]);
 
   // Update member status
   const handleUpdateMemberStatus = async (member: TeamMember, newStatus: string) => {
@@ -389,13 +389,13 @@ export default function Settings() {
     if (generalDialogOpen && effectiveOrgId) {
       loadSettings();
     }
-  }, [generalDialogOpen, effectiveOrgId]);
+  }, [generalDialogOpen, effectiveOrgId, loadSettings]);
 
   useEffect(() => {
     if (teamDialogOpen && effectiveOrgId) {
       loadTeamMembers();
     }
-  }, [teamDialogOpen, effectiveOrgId]);
+  }, [teamDialogOpen, effectiveOrgId, loadTeamMembers]);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
