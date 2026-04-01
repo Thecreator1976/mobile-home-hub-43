@@ -38,7 +38,7 @@ export function FileUpload({
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
-  }, []);
+  }, [uploadFile]);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();

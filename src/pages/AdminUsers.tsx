@@ -71,7 +71,7 @@ export default function AdminUsers() {
     if (isSuperAdmin) {
       fetchOrganizations();
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, fetchUsers]);
 
   const fetchOrganizations = async () => {
     try {
