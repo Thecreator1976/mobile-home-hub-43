@@ -47,20 +47,16 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
       return;
     }
 
-    // Super admins bypass org payment and role restrictions
     if (isSuperAdmin) return;
 
-    // Block unpaid organizations
     if (userOrganization && !userOrganization.is_paid) {
       navigate("/payment-required", { replace: true });
       return;
     }
 
-    // Enforce required route role
     if (!hasRequiredRole(userRole as AppRole | null, requiredRole)) {
-      // For Block 1, redirect to dashboard.
-      // In Block 2, change this to: navigate("/unauthorized", { replace: true });
-      navigate("/dashboard", { replace: true });
+      navigate("/unauthorized", { replace: true });
+      return;
     }
   }, [
     user,
