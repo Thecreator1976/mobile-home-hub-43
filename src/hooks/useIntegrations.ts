@@ -4,12 +4,18 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 
+export type IntegrationEventType = "new_lead" | "status_change";
+
 export interface ExternalIntegration {
   id: string;
   user_id: string;
   service_name: string;
   webhook_url: string | null;
-  config: Record<string, any>;
+  config: {
+    is_active?: boolean;
+    events?: IntegrationEventType[];
+    [key: string]: unknown;
+  };
   is_active: boolean;
   last_sync: string | null;
   created_at: string;
@@ -35,7 +41,13 @@ export interface SocialPost {
 export interface CreateIntegrationInput {
   service_name: string;
   webhook_url?: string;
-  config?: Record<string, any>;
+  config?: Record<string, unknown>;
+}
+
+interface WebhookTestResult {
+  success: boolean;
+  message: string;
+  status?: number;
 }
 
 export function useIntegrations() {
@@ -51,7 +63,7 @@ export function useIntegrations() {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data as ExternalIntegration[];
+      return (data || []) as ExternalIntegration[];
     },
     enabled: !!user,
   });
@@ -63,6 +75,7 @@ export function useIntegrations() {
         .insert({
           ...input,
           user_id: user?.id,
+          is_active: input.config?.is_active ?? true,
         })
         .select()
         .single();
@@ -88,9 +101,17 @@ export function useIntegrations() {
 
   const updateIntegration = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ExternalIntegration> & { id: string }) => {
+      const payload = {
+        ...updates,
+        is_active:
+          typeof updates.is_active === "boolean"
+            ? updates.is_active
+            : (updates.config?.is_active as boolean | undefined),
+      };
+
       const { data, error } = await supabase
         .from("external_integrations")
-        .update(updates)
+        .update(payload)
         .eq("id", id)
         .select()
         .single();
@@ -141,15 +162,14 @@ export function useIntegrations() {
 
   const triggerWebhook = async (
     webhookUrl: string,
-    payload: Record<string, any>
-  ): Promise<boolean> => {
+    payload: Record<string, unknown>
+  ): Promise<WebhookTestResult> => {
     try {
-      await fetch(webhookUrl, {
+      const response = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        mode: "no-cors",
         body: JSON.stringify({
           ...payload,
           timestamp: new Date().toISOString(),
@@ -157,19 +177,41 @@ export function useIntegrations() {
         }),
       });
 
+      if (!response.ok) {
+        let responseText = "";
+        try {
+          responseText = await response.text();
+        } catch {
+          responseText = "";
+        }
+
+        return {
+          success: false,
+          status: response.status,
+          message: responseText || `Webhook returned HTTP ${response.status}`,
+        };
+      }
+
       toast({
-        title: "Request Sent",
-        description: "The request was sent to your automation. Check Zapier/n8n history to confirm.",
+        title: "Webhook Test Sent",
+        description: "The webhook responded successfully.",
       });
-      return true;
+
+      return {
+        success: true,
+        status: response.status,
+        message: "Webhook responded successfully.",
+      };
     } catch (error) {
       console.error("Error triggering webhook:", error);
-      toast({
-        title: "Error",
-        description: "Failed to trigger the webhook. Please check the URL.",
-        variant: "destructive",
-      });
-      return false;
+
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to trigger the webhook. Please check the URL.",
+      };
     }
   };
 
@@ -184,13 +226,13 @@ export function useIntegrations() {
   };
 }
 
-// Helper to get user's organization_id
 const getUserOrganizationId = async (userId: string): Promise<string | null> => {
   const { data } = await supabase
-    .from('profiles')
-    .select('organization_id')
-    .eq('user_id', userId)
+    .from("profiles")
+    .select("organization_id")
+    .eq("user_id", userId)
     .single();
+
   return data?.organization_id || null;
 };
 
@@ -199,7 +241,6 @@ export function useSocialPosts(sellerLeadId?: string) {
   const { user } = useAuth();
   const [userOrgId, setUserOrgId] = useState<string | null>(null);
 
-  // Fetch user's organization ID
   useEffect(() => {
     if (user?.id) {
       getUserOrganizationId(user.id).then(setUserOrgId);
@@ -226,11 +267,13 @@ export function useSocialPosts(sellerLeadId?: string) {
   });
 
   const createPost = useMutation({
-    mutationFn: async (input: Omit<SocialPost, "id" | "created_at" | "created_by" | "org_id" | "organization_id">) => {
-      if (!user?.id) throw new Error('User not authenticated');
-      
-      const organizationId = userOrgId || await getUserOrganizationId(user.id);
-      if (!organizationId) throw new Error('User organization not found');
+    mutationFn: async (
+      input: Omit<SocialPost, "id" | "created_at" | "created_by" | "org_id" | "organization_id">
+    ) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const organizationId = userOrgId || (await getUserOrganizationId(user.id));
+      if (!organizationId) throw new Error("User organization not found");
 
       const { data, error } = await supabase
         .from("social_posts_queue")
@@ -252,7 +295,15 @@ export function useSocialPosts(sellerLeadId?: string) {
   });
 
   const updatePostStatus = useMutation({
-    mutationFn: async ({ id, status, error_message }: { id: string; status: string; error_message?: string }) => {
+    mutationFn: async ({
+      id,
+      status,
+      error_message,
+    }: {
+      id: string;
+      status: string;
+      error_message?: string;
+    }) => {
       const { data, error } = await supabase
         .from("social_posts_queue")
         .update({ status, error_message })
