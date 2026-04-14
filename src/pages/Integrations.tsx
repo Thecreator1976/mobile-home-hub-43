@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useIntegrations, ExternalIntegration } from "@/hooks/useIntegrations";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useIntegrations, ExternalIntegration, IntegrationEventType } from "@/hooks/useIntegrations";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import {
@@ -52,95 +59,130 @@ interface IntegrationService {
   icon: LucideIcon;
   helpText: string;
   docsUrl?: string;
+  supportedEvents: IntegrationEventType[];
 }
+
+const EVENT_OPTIONS: { value: IntegrationEventType; label: string }[] = [
+  { value: "new_lead", label: "New Lead" },
+  { value: "status_change", label: "Status Change" },
+];
 
 const INTEGRATION_SERVICES: IntegrationService[] = [
   {
     name: "docusign",
     displayName: "DocuSign",
-    description: "Send contracts for electronic signature via Zapier webhook",
+    description: "Send contracts for electronic signature through your automation flow",
     icon: FileSignature,
-    helpText: "Enter your Zapier webhook URL that triggers DocuSign envelope creation",
+    helpText: "Enter the webhook URL used to trigger your DocuSign automation",
     docsUrl: "https://zapier.com/apps/docusign/integrations",
+    supportedEvents: ["status_change"],
   },
   {
     name: "openphone",
     displayName: "OpenPhone",
-    description: "Initiate calls and send SMS through Zapier/n8n workflows",
+    description: "Trigger calling or SMS workflows when lead events happen",
     icon: Phone,
-    helpText: "Enter your Zapier/n8n webhook URL for OpenPhone actions",
+    helpText: "Enter the webhook URL used by your OpenPhone automation",
     docsUrl: "https://zapier.com/apps/openphone/integrations",
+    supportedEvents: ["new_lead", "status_change"],
   },
   {
     name: "facebook_messenger",
     displayName: "Facebook Messenger",
-    description: "Manage messenger conversations with leads and buyers",
+    description: "Route CRM events into Messenger automation flows",
     icon: MessageCircle,
-    helpText: "Configure your Facebook Messenger webhook for incoming messages",
+    helpText: "Enter the webhook URL used for your Messenger automation",
     docsUrl: "https://developers.facebook.com/docs/messenger-platform",
+    supportedEvents: ["new_lead", "status_change"],
   },
   {
     name: "zapier",
     displayName: "Zapier",
-    description: "Connect to 5,000+ apps with custom automation workflows",
+    description: "Connect CRM events to thousands of external services",
     icon: Zap,
-    helpText: "Enter your general Zapier webhook URL for custom automations",
+    helpText: "Enter your Zapier webhook URL",
     docsUrl: "https://zapier.com/apps/webhooks/integrations",
+    supportedEvents: ["new_lead", "status_change"],
   },
   {
     name: "google_calendar",
     displayName: "Google Calendar",
-    description: "Sync appointments with your Google Calendar",
+    description: "Sync appointment and operational workflows through automations",
     icon: Calendar,
-    helpText: "Enter your Zapier webhook URL to sync calendar events",
+    helpText: "Enter the webhook URL used for your Google Calendar automation",
     docsUrl: "https://zapier.com/apps/google-calendar/integrations",
+    supportedEvents: ["status_change"],
   },
   {
     name: "mailchimp",
     displayName: "Mailchimp",
-    description: "Add leads to email marketing campaigns automatically",
+    description: "Add leads to email marketing flows when new records arrive",
     icon: Mail,
-    helpText: "Enter your Zapier webhook URL for Mailchimp list management",
+    helpText: "Enter the webhook URL used for your Mailchimp automation",
     docsUrl: "https://zapier.com/apps/mailchimp/integrations",
+    supportedEvents: ["new_lead"],
   },
   {
     name: "twilio_sms",
     displayName: "Twilio SMS",
-    description: "Send SMS messages directly to leads and buyers",
+    description: "Trigger SMS workflows from CRM lead events",
     icon: MessageSquare,
-    helpText: "Enter your Zapier/n8n webhook URL for Twilio SMS actions",
+    helpText: "Enter the webhook URL used for your Twilio SMS automation",
     docsUrl: "https://zapier.com/apps/twilio/integrations",
+    supportedEvents: ["new_lead", "status_change"],
   },
   {
     name: "quickbooks",
     displayName: "QuickBooks",
-    description: "Sync expenses and transactions with QuickBooks",
+    description: "Sync operational data to accounting flows",
     icon: DollarSign,
-    helpText: "Enter your Zapier webhook URL for QuickBooks sync",
+    helpText: "Enter the webhook URL used for your QuickBooks automation",
     docsUrl: "https://zapier.com/apps/quickbooks-online/integrations",
+    supportedEvents: ["status_change"],
   },
   {
     name: "slack",
     displayName: "Slack",
-    description: "Get team notifications for new leads and status changes",
+    description: "Send team notifications for CRM activity",
     icon: Hash,
-    helpText: "Enter your Slack incoming webhook URL or Zapier webhook",
+    helpText: "Enter your Slack or automation webhook URL",
     docsUrl: "https://api.slack.com/messaging/webhooks",
+    supportedEvents: ["new_lead", "status_change"],
   },
 ];
 
 export default function Integrations() {
-  const { integrations, isLoading, createIntegration, updateIntegration, deleteIntegration, triggerWebhook } = useIntegrations();
+  const {
+    integrations,
+    isLoading,
+    createIntegration,
+    updateIntegration,
+    deleteIntegration,
+    triggerWebhook,
+  } = useIntegrations();
+
   const [configureDialogOpen, setConfigureDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<IntegrationService | null>(null);
   const [selectedIntegration, setSelectedIntegration] = useState<ExternalIntegration | null>(null);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
+  const [selectedEvents, setSelectedEvents] = useState<IntegrationEventType[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
-  const getIntegrationForService = (serviceName: string): ExternalIntegration | undefined => {
-    return integrations.find((i) => i.service_name === serviceName);
+  const integrationsByService = useMemo(() => {
+    return new Map(integrations.map((integration) => [integration.service_name, integration]));
+  }, [integrations]);
+
+  const getConfiguredEvents = (integration?: ExternalIntegration | null) => {
+    const configEvents = integration?.config?.events;
+    if (Array.isArray(configEvents)) {
+      return configEvents.filter(
+        (value): value is IntegrationEventType =>
+          value === "new_lead" || value === "status_change"
+      );
+    }
+    return [];
   };
 
   const handleConnect = (service: IntegrationService) => {
@@ -148,6 +190,7 @@ export default function Integrations() {
     setSelectedIntegration(null);
     setWebhookUrl("");
     setIsActive(true);
+    setSelectedEvents(service.supportedEvents);
     setConfigureDialogOpen(true);
   };
 
@@ -156,6 +199,10 @@ export default function Integrations() {
     setSelectedIntegration(integration);
     setWebhookUrl(integration.webhook_url || "");
     setIsActive(integration.is_active ?? true);
+
+    const configEvents = getConfiguredEvents(integration);
+    setSelectedEvents(configEvents.length > 0 ? configEvents : service.supportedEvents);
+
     setConfigureDialogOpen(true);
   };
 
@@ -163,6 +210,14 @@ export default function Integrations() {
     setSelectedService(service);
     setSelectedIntegration(integration);
     setDeleteDialogOpen(true);
+  };
+
+  const toggleEvent = (event: IntegrationEventType) => {
+    setSelectedEvents((current) =>
+      current.includes(event)
+        ? current.filter((value) => value !== event)
+        : [...current, event]
+    );
   };
 
   const handleSave = async () => {
@@ -177,20 +232,36 @@ export default function Integrations() {
       return;
     }
 
+    if (selectedEvents.length === 0) {
+      toast({
+        title: "Error",
+        description: "Select at least one event for this integration.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const payloadConfig = {
+      is_active: isActive,
+      events: selectedEvents,
+    };
+
     try {
       if (selectedIntegration) {
         await updateIntegration.mutateAsync({
           id: selectedIntegration.id,
           webhook_url: webhookUrl.trim(),
           is_active: isActive,
+          config: payloadConfig,
         });
       } else {
         await createIntegration.mutateAsync({
           service_name: selectedService.name,
           webhook_url: webhookUrl.trim(),
-          config: { is_active: isActive },
+          config: payloadConfig,
         });
       }
+
       setConfigureDialogOpen(false);
     } catch (error) {
       console.error("Error saving integration:", error);
@@ -209,7 +280,7 @@ export default function Integrations() {
   };
 
   const handleTestWebhook = async () => {
-    if (!webhookUrl.trim()) {
+    if (!selectedService || !webhookUrl.trim()) {
       toast({
         title: "Error",
         description: "Please enter a webhook URL first",
@@ -219,12 +290,22 @@ export default function Integrations() {
     }
 
     setIsTesting(true);
+
     try {
-      await triggerWebhook(webhookUrl.trim(), {
+      const result = await triggerWebhook(webhookUrl.trim(), {
         test: true,
-        service: selectedService?.name,
-        message: "Test webhook from Lovable CRM",
+        service_name: selectedService.name,
+        supported_events: selectedEvents,
+        message: `Test webhook from MobileHome CRM for ${selectedService.displayName}`,
       });
+
+      if (!result.success) {
+        toast({
+          title: "Webhook test failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsTesting(false);
     }
@@ -247,21 +328,22 @@ export default function Integrations() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Integrations</h1>
             <p className="text-muted-foreground">
-              Connect with third-party services using webhooks and automation platforms
+              Connect CRM events to external automation services with webhooks
             </p>
           </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {INTEGRATION_SERVICES.map((service) => {
-            const integration = getIntegrationForService(service.name);
+            const integration = integrationsByService.get(service.name);
             const isConnected = !!integration;
             const Icon = service.icon;
+            const events = getConfiguredEvents(integration);
 
             return (
               <Card key={service.name} className="flex flex-col">
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-primary/10 p-2">
                         <Icon className="h-5 w-5 text-primary" />
@@ -270,24 +352,52 @@ export default function Integrations() {
                         <CardTitle className="text-lg">{service.displayName}</CardTitle>
                       </div>
                     </div>
+
                     {isConnected && (
                       <Badge variant={integration.is_active ? "default" : "secondary"} className="shrink-0">
                         {integration.is_active ? (
-                          <><Check className="h-3 w-3 mr-1" /> Connected</>
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Connected
+                          </>
                         ) : (
-                          <><X className="h-3 w-3 mr-1" /> Inactive</>
+                          <>
+                            <X className="h-3 w-3 mr-1" />
+                            Inactive
+                          </>
                         )}
                       </Badge>
                     )}
                   </div>
+
                   <CardDescription className="mt-2">{service.description}</CardDescription>
                 </CardHeader>
+
                 <CardContent className="flex-1 flex flex-col justify-end space-y-3">
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-medium">Supported events:</span>{" "}
+                    {service.supportedEvents
+                      .map((event) =>
+                        EVENT_OPTIONS.find((option) => option.value === event)?.label || event
+                      )
+                      .join(", ")}
+                  </div>
+
                   {isConnected && integration.webhook_url && (
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p className="truncate" title={integration.webhook_url}>
                         <span className="font-medium">Webhook:</span> {integration.webhook_url}
                       </p>
+
+                      <p>
+                        <span className="font-medium">Events:</span>{" "}
+                        {(events.length > 0 ? events : service.supportedEvents)
+                          .map((event) =>
+                            EVENT_OPTIONS.find((option) => option.value === event)?.label || event
+                          )
+                          .join(", ")}
+                      </p>
+
                       {integration.last_sync && (
                         <p>
                           <span className="font-medium">Last sync:</span>{" "}
@@ -298,7 +408,7 @@ export default function Integrations() {
                   )}
 
                   <div className="flex gap-2">
-                    {isConnected ? (
+                    {isConnected && integration ? (
                       <>
                         <Button
                           variant="outline"
@@ -327,12 +437,9 @@ export default function Integrations() {
                         >
                           Connect
                         </Button>
+
                         {service.docsUrl && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                          >
+                          <Button variant="ghost" size="sm" asChild>
                             <a href={service.docsUrl} target="_blank" rel="noopener noreferrer">
                               <ExternalLink className="h-4 w-4" />
                             </a>
@@ -348,7 +455,6 @@ export default function Integrations() {
         </div>
       </div>
 
-      {/* Configure Dialog */}
       <Dialog open={configureDialogOpen} onOpenChange={setConfigureDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -360,9 +466,7 @@ export default function Integrations() {
                 </>
               )}
             </DialogTitle>
-            <DialogDescription>
-              {selectedService?.helpText}
-            </DialogDescription>
+            <DialogDescription>{selectedService?.helpText}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -374,6 +478,27 @@ export default function Integrations() {
                 value={webhookUrl}
                 onChange={(e) => setWebhookUrl(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Trigger Events</Label>
+              <div className="space-y-2 rounded-md border p-3">
+                {selectedService?.supportedEvents.map((event) => {
+                  const option = EVENT_OPTIONS.find((item) => item.value === event);
+                  return (
+                    <label key={event} className="flex items-center justify-between gap-3 cursor-pointer">
+                      <span className="text-sm">{option?.label || event}</span>
+                      <Switch
+                        checked={selectedEvents.includes(event)}
+                        onCheckedChange={() => toggleEvent(event)}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Select which CRM events should trigger this integration.
+              </p>
             </div>
 
             <div className="flex items-center justify-between">
@@ -410,26 +535,34 @@ export default function Integrations() {
               disabled={isTesting || !webhookUrl.trim()}
             >
               {isTesting ? (
-                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Testing...</>
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Testing...
+                </>
               ) : (
                 "Test Webhook"
               )}
             </Button>
+
             <Button
               onClick={handleSave}
               disabled={createIntegration.isPending || updateIntegration.isPending}
             >
-              {(createIntegration.isPending || updateIntegration.isPending) ? (
-                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Saving...</>
+              {createIntegration.isPending || updateIntegration.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Saving...
+                </>
+              ) : selectedIntegration ? (
+                "Update"
               ) : (
-                selectedIntegration ? "Update" : "Connect"
+                "Connect"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -445,7 +578,10 @@ export default function Integrations() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleteIntegration.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Disconnecting...</>
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Disconnecting...
+                </>
               ) : (
                 "Disconnect"
               )}
