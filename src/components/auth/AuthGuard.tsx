@@ -8,24 +8,69 @@ interface AuthGuardProps {
   requiredRole?: "admin" | "agent" | "viewer";
 }
 
+type AppRole = "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin";
+
+const ROLE_LEVEL: Record<AppRole, number> = {
+  viewer: 1,
+  agent: 2,
+  admin: 3,
+  tenant_admin: 4,
+  super_admin: 5,
+};
+
+function hasRequiredRole(
+  userRole: AppRole | null,
+  requiredRole?: "admin" | "agent" | "viewer"
+): boolean {
+  if (!requiredRole) return true;
+  if (!userRole) return false;
+
+  return ROLE_LEVEL[userRole] >= ROLE_LEVEL[requiredRole];
+}
+
 export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
-  const { user, isLoading, isSuperAdmin, userOrganization } = useAuth();
+  const {
+    user,
+    userRole,
+    isLoading,
+    isSuperAdmin,
+    userOrganization,
+  } = useAuth();
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (isLoading) return;
+
+    if (!user) {
       navigate("/login", { replace: true });
       return;
     }
 
-    // Super admins NEVER get payment blocked - they are platform owners
+    // Super admins bypass org payment and role restrictions
     if (isSuperAdmin) return;
 
-    // Check if organization needs to pay (only for non-super admins)
-    if (user && userOrganization && !userOrganization.is_paid) {
+    // Block unpaid organizations
+    if (userOrganization && !userOrganization.is_paid) {
       navigate("/payment-required", { replace: true });
+      return;
     }
-  }, [user, isLoading, isSuperAdmin, userOrganization, navigate]);
+
+    // Enforce required route role
+    if (!hasRequiredRole(userRole as AppRole | null, requiredRole)) {
+      // For Block 1, redirect to dashboard.
+      // In Block 2, change this to: navigate("/unauthorized", { replace: true });
+      navigate("/dashboard", { replace: true });
+    }
+  }, [
+    user,
+    userRole,
+    requiredRole,
+    isLoading,
+    isSuperAdmin,
+    userOrganization,
+    navigate,
+  ]);
 
   if (isLoading) {
     return (
@@ -40,6 +85,16 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
 
   if (!user) {
     return null;
+  }
+
+  if (!isSuperAdmin) {
+    if (userOrganization && !userOrganization.is_paid) {
+      return null;
+    }
+
+    if (!hasRequiredRole(userRole as AppRole | null, requiredRole)) {
+      return null;
+    }
   }
 
   return <>{children}</>;
