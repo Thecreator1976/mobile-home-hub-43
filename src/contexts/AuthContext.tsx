@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 type AppRole = "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin";
 
@@ -20,23 +19,30 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isTenantAdmin: boolean;
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  sessionExpired: boolean;
+  setSessionExpired: React.Dispatch<React.SetStateAction<boolean>>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string
+  ) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Helper to clear all Supabase auth tokens from localStorage
 const clearSupabaseLocalStorage = () => {
   const keysToRemove: string[] = [];
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+    if (key && (key.startsWith("sb-") || key.includes("supabase"))) {
       keysToRemove.push(key);
     }
   }
-  keysToRemove.forEach(key => localStorage.removeItem(key));
+
+  keysToRemove.forEach((key) => localStorage.removeItem(key));
   console.log("Cleared Supabase localStorage keys:", keysToRemove);
 };
 
@@ -51,140 +57,191 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isSuperAdmin = userRole === "super_admin";
   const isTenantAdmin = userRole === "tenant_admin";
 
-  // Clears all auth state and localStorage tokens
-  const clearAuthState = async (expired: boolean = false) => {
-    console.log("Clearing auth state, expired:", expired);
-    clearSupabaseLocalStorage();
+  const resetAppAuthState = () => {
     setUser(null);
     setSession(null);
     setUserRole(null);
     setUserOrganization(null);
+  };
+
+  const clearAuthState = async (expired = false) => {
+    console.log("Clearing auth state, expired:", expired);
+    clearSupabaseLocalStorage();
+    resetAppAuthState();
+
     if (expired) {
       setSessionExpired(true);
     }
+
     try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch (e) {
-      // Ignore signOut errors during cleanup
-      console.log("SignOut during cleanup:", e);
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (error) {
+      console.log("SignOut during cleanup:", error);
     }
   };
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        console.log("Auth state changed:", event);
-        
-        // Handle token refresh failures - session exists but refresh failed
-        if (event === 'TOKEN_REFRESHED' && !currentSession) {
-          console.warn("Token refresh failed, clearing auth state");
-          await clearAuthState(true);
-          return;
-        }
-
-        // Handle sign out events
-        if (event === 'SIGNED_OUT') {
-          setSession(null);
-          setUser(null);
-          setUserRole(null);
-          setUserOrganization(null);
-          return;
-        }
-
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        // Defer role and org fetch to avoid deadlock
-        if (currentSession?.user) {
-          setTimeout(() => {
-            fetchUserRoleAndOrg(currentSession.user.id);
-          }, 0);
-        } else {
-          setUserRole(null);
-          setUserOrganization(null);
-        }
-      }
-    );
-
-    // THEN check for existing session with error handling
-    supabase.auth.getSession().then(async ({ data: { session: existingSession }, error }) => {
-      if (error) {
-        console.error("Session error, clearing auth state:", error);
-        await clearAuthState(true);
-        setIsLoading(false);
-        return;
-      }
-      
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
-        fetchUserRoleAndOrg(existingSession.user.id);
-      }
-      setIsLoading(false);
-    }).catch(async (error) => {
-      console.error("Unexpected session error:", error);
-      await clearAuthState(true);
-      setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   const fetchUserRoleAndOrg = async (userId: string) => {
     try {
-      // Fetch role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
       if (roleError) {
-        console.error("Error fetching user role:", roleError);
-        setUserRole("viewer");
-      } else {
-        setUserRole(roleData?.role as AppRole);
+        throw roleError;
       }
 
-      // Fetch organization via profile
+      const resolvedRole = (roleData?.role as AppRole | undefined) ?? "viewer";
+
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("organization_id")
         .eq("user_id", userId)
-        .single();
+        .maybeSingle();
 
-      if (profileError || !profileData?.organization_id) {
-        setUserOrganization(null);
-      } else {
-        // Fetch organization details including is_paid
+      if (profileError) {
+        throw profileError;
+      }
+
+      let resolvedOrganization: UserOrganization | null = null;
+
+      if (profileData?.organization_id) {
         const { data: orgData, error: orgError } = await supabase
           .from("organizations")
           .select("id, name, slug, is_paid")
           .eq("id", profileData.organization_id)
-          .single();
+          .maybeSingle();
 
-        if (orgError || !orgData) {
-          setUserOrganization(null);
-        } else {
-          setUserOrganization({
+        if (orgError) {
+          throw orgError;
+        }
+
+        if (orgData) {
+          resolvedOrganization = {
             id: orgData.id,
             name: orgData.name,
             slug: orgData.slug,
             is_paid: orgData.is_paid ?? false,
-          });
+          };
         }
       }
+
+      return {
+        role: resolvedRole,
+        organization: resolvedOrganization,
+      };
     } catch (error) {
       console.error("Error fetching user role/org:", error);
-      setUserRole("viewer");
-      setUserOrganization(null);
+
+      return {
+        role: "viewer" as AppRole,
+        organization: null,
+      };
     }
   };
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const applySessionState = async (
+      currentSession: Session | null,
+      options?: { expired?: boolean }
+    ) => {
+      if (!isMounted) return;
+
+      setIsLoading(true);
+
+      if (!currentSession?.user) {
+        resetAppAuthState();
+
+        if (options?.expired) {
+          setSessionExpired(true);
+        }
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+
+        return;
+      }
+
+      setSession(currentSession);
+      setUser(currentSession.user);
+
+      const resolved = await fetchUserRoleAndOrg(currentSession.user.id);
+
+      if (!isMounted) return;
+
+      setUserRole(resolved.role);
+      setUserOrganization(resolved.organization);
+      setIsLoading(false);
+    };
+
+    const initializeAuth = async () => {
+      try {
+        const {
+          data: { session: existingSession },
+          error,
+        } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("Session error, clearing auth state:", error);
+          await clearAuthState(true);
+
+          if (isMounted) {
+            setIsLoading(false);
+          }
+          return;
+        }
+
+        await applySessionState(existingSession);
+      } catch (error) {
+        console.error("Unexpected session error:", error);
+        await clearAuthState(true);
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log("Auth state changed:", event);
+
+      if (event === "TOKEN_REFRESHED" && !currentSession) {
+        console.warn("Token refresh failed, clearing auth state");
+        await clearAuthState(true);
+
+        if (isMounted) {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      if (event === "SIGNED_OUT") {
+        if (!isMounted) return;
+        resetAppAuthState();
+        setIsLoading(false);
+        return;
+      }
+
+      await applySessionState(currentSession);
+    });
+
+    initializeAuth();
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const signUp = async (email: string, password: string, fullName: string) => {
     const redirectUrl = `${window.location.origin}/`;
-    
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -209,11 +266,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-    setUserOrganization(null);
+    setIsLoading(true);
+
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      resetAppAuthState();
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -226,13 +286,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSuperAdmin,
         isTenantAdmin,
         isLoading,
+        sessionExpired,
+        setSessionExpired,
         signUp,
         signIn,
         signOut,
-        // @ts-ignore - expose for login page
-        sessionExpired,
-        // @ts-ignore - expose for login page to reset flag
-        setSessionExpired,
       }}
     >
       {children}
@@ -242,8 +300,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
+
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
+
   return context;
 }
