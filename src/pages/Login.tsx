@@ -1,183 +1,167 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Home, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { loginSchema } from "@/lib/validations";
-import type { z } from "zod";
-
-type LoginFormData = z.infer<typeof loginSchema>;
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '@/contexts/AuthContext';
+import { Eye, EyeOff, LogIn } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Login() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { signIn, user, isLoading: authLoading, sessionExpired, setSessionExpired } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const { login, sessionExpired, setSessionExpired } = useAuth();
+  const router = useRouter();
 
-  const from = (location.state as { from?: string })?.from || "/dashboard";
-
-  useEffect(() => {
-    if (sessionExpired) {
-      toast({
-        title: "Session expired",
-        description: "Your session has expired. Please log in again.",
-        variant: "destructive",
-      });
-      setSessionExpired(false);
-    }
-  }, [sessionExpired, setSessionExpired]);
-
-  const form = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
-  });
-
-  useEffect(() => {
-    if (user && !authLoading) {
-      navigate(from, { replace: true });
-    }
-  }, [user, authLoading, navigate, from]);
-
-  const onSubmit = async (data: LoginFormData) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
     setIsLoading(true);
 
-    const { error } = await signIn(data.email, data.password);
-
-    if (error) {
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid email or password.",
-        variant: "destructive",
-      });
+    try {
+      await login(email, password);
+      // Clear session expired flag on successful login
+      if (sessionExpired) {
+        setSessionExpired(false);
+      }
+      
+      // Redirect to returnUrl or dashboard
+      const { returnUrl } = router.query;
+      router.push(returnUrl as string || '/dashboard');
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Invalid email or password');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    toast({
-      title: "Welcome back!",
-      description: "You have successfully logged in.",
-    });
-    navigate(from, { replace: true });
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="w-full max-w-md animate-fade-in">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
-            <Home className="h-6 w-6 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">MobileHome CRM</h1>
-            <p className="text-sm text-muted-foreground">Real Estate Management</p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            Sign in to your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Or{' '}
+            <Link href="/register" className="font-medium text-primary hover:text-primary/90">
+              create a new account
+            </Link>
+          </p>
         </div>
 
-        <Card className="shadow-xl border-border/50">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
+        {/* Session expired message */}
+        {sessionExpired && (
+          <div className="rounded-md bg-yellow-50 p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">
+                  Session expired
+                </h3>
+                <div className="mt-2 text-sm text-yellow-700">
+                  <p>Your session has expired. Please log in again to continue.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="email"
-                            placeholder="john@example.com"
-                            className="pl-10"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        {error && (
+          <div className="rounded-md bg-red-50 p-4">
+            <div className="flex">
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">
+                  Login failed
+                </h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>{error}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-                          Forgot password?
-                        </Link>
-                      </div>
-                      <FormControl>
-                        <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            type="password"
-                            placeholder="••••••••"
-                            className="pl-10"
-                            disabled={isLoading}
-                            {...field}
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Email address"
+              />
+            </div>
+            <div className="relative">
+              <label htmlFor="password" className="sr-only">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm"
+                placeholder="Password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <Eye className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
+            </div>
+          </div>
 
-                <Button variant="gradient" className="w-full" type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    <>
-                      Sign In
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                Remember me
+              </label>
+            </div>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <p className="text-sm text-muted-foreground text-center">
-              Need access?{" "}
-              <span className="text-foreground font-medium">
-                Contact your administrator for an invitation.
+            <div className="text-sm">
+              <Link href="/forgot-password" className="font-medium text-primary hover:text-primary/90">
+                Forgot your password?
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span className="absolute left-0 inset-y-0 flex items-center pl-3">
+                <LogIn className="h-5 w-5 text-primary-500 group-hover:text-primary-400" />
               </span>
-            </p>
-          </CardFooter>
-        </Card>
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
