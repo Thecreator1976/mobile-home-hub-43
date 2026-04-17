@@ -69,6 +69,7 @@ export default function SellerLeads() {
                   <TableHead>Property</TableHead>
                   <TableHead>Asking Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -80,6 +81,7 @@ export default function SellerLeads() {
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
                   </TableRow>
                 ))}
@@ -106,6 +108,7 @@ export default function SellerLeads() {
                   <TableHead>Property</TableHead>
                   <TableHead>Asking Price</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -153,6 +156,11 @@ export default function SellerLeads() {
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={lead.status} />
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={lead.source === 'scmobilehomebuyer' ? 'default' : lead.source === 'react-foundation' ? 'secondary' : 'outline'}>
+                        {lead.source === 'scmobilehomebuyer' ? 'SC Buyer Site' : lead.source === 'react-foundation' ? 'Carolinas Market' : 'Manual'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
