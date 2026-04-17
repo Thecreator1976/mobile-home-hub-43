@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Eye, Edit, Trash2, Phone, Mail } from "lucide-react";
@@ -28,6 +29,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SellerLeads() {
   const { leads, isLoading, deleteLead } = useSellerLeads();
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  const filteredLeads = sourceFilter === 'all'
+    ? leads
+    : leads?.filter(lead => (sourceFilter === 'manual' ? !lead.source : lead.source === sourceFilter));
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return "-";
@@ -56,6 +62,21 @@ export default function SellerLeads() {
               <Plus className="mr-2 h-4 w-4" />
               Add Lead
             </Link>
+          </Button>
+        </div>
+
+        <div className="flex gap-2 mb-4">
+          <Button variant={sourceFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('all')}>
+            All Sources
+          </Button>
+          <Button variant={sourceFilter === 'scmobilehomebuyer' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('scmobilehomebuyer')}>
+            SC Buyer Site (Retail)
+          </Button>
+          <Button variant={sourceFilter === 'react-foundation' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('react-foundation')}>
+            Carolinas Market (Wholesale)
+          </Button>
+          <Button variant={sourceFilter === 'manual' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('manual')}>
+            Manual Entry
           </Button>
         </div>
 
@@ -88,7 +109,7 @@ export default function SellerLeads() {
               </TableBody>
             </Table>
           </div>
-        ) : leads.length === 0 ? (
+        ) : filteredLeads.length === 0 ? (
           <div className="rounded-lg border p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">No Seller Leads Yet</h3>
             <p className="text-muted-foreground mb-4">
@@ -113,7 +134,7 @@ export default function SellerLeads() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.map((lead) => (
+                {filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
                     <TableCell>
                       <div className="font-medium">{lead.name}</div>

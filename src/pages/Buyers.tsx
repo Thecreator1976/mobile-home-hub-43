@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Eye, Edit, Trash2, Phone, Mail, CreditCard } from "lucide-react";
@@ -27,6 +28,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Buyers() {
   const { buyers, isLoading, deleteBuyer } = useBuyers();
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  const filteredBuyers = sourceFilter === 'all'
+    ? buyers
+    : buyers?.filter((buyer: any) => (sourceFilter === 'manual' ? !buyer.source : buyer.source === sourceFilter));
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return "-";
@@ -71,6 +77,21 @@ export default function Buyers() {
           </Button>
         </div>
 
+        <div className="flex gap-2 mb-4">
+          <Button variant={sourceFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('all')}>
+            All Sources
+          </Button>
+          <Button variant={sourceFilter === 'scmobilehomebuyer' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('scmobilehomebuyer')}>
+            SC Buyer Site (Retail)
+          </Button>
+          <Button variant={sourceFilter === 'react-foundation' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('react-foundation')}>
+            Carolinas Market (Wholesale)
+          </Button>
+          <Button variant={sourceFilter === 'manual' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('manual')}>
+            Manual Entry
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="rounded-lg border">
             <Table>
@@ -100,7 +121,7 @@ export default function Buyers() {
               </TableBody>
             </Table>
           </div>
-        ) : buyers.length === 0 ? (
+        ) : filteredBuyers.length === 0 ? (
           <div className="rounded-lg border p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">No Buyers Yet</h3>
             <p className="text-muted-foreground mb-4">
@@ -125,7 +146,7 @@ export default function Buyers() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {buyers.map((buyer) => (
+                {filteredBuyers.map((buyer) => (
                   <TableRow key={buyer.id}>
                     <TableCell>
                       <div className="font-medium">{buyer.name}</div>
