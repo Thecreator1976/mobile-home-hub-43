@@ -112,7 +112,13 @@ export default function ContractDetail() {
     if (!contract || !newStatus) return;
     setIsSaving(true);
     try {
-      const updates: any = {
+      const updates: {
+        id: string;
+        status: string;
+        _statusNotes: string;
+        sent_at?: string;
+        signed_at?: string;
+      } = {
         id: contract.id,
         status: newStatus,
         _statusNotes: statusNotes,
@@ -213,8 +219,9 @@ export default function ContractDetail() {
       setRegenerateDialogOpen(false);
       toast({ title: "Contract Regenerated", description: "The contract has been regenerated successfully." });
       refetch();
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to regenerate contract.", variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to regenerate contract.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setIsRegenerating(false);
     }

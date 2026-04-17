@@ -7,8 +7,7 @@ export const corsHeaders = {
 
 export interface AuthResult {
   userId: string;
-  // deno-lint-ignore no-explicit-any
-  supabase: SupabaseClient<any, "public", any>;
+  supabase: SupabaseClient;
 }
 
 /**

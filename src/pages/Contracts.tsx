@@ -182,8 +182,9 @@ export default function Contracts() {
       });
 
       toast({ title: "Contract Regenerated", description: "The contract has been regenerated successfully." });
-    } catch (error: any) {
-      toast({ title: "Error", description: error.message || "Failed to regenerate contract.", variant: "destructive" });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to regenerate contract.";
+      toast({ title: "Error", description: message, variant: "destructive" });
     } finally {
       setRegeneratingId(null);
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DataTable, Column } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
@@ -66,13 +66,6 @@ export default function AdminUsers() {
   const [inviteRole, setInviteRole] = useState<string>("agent");
   const { sendInvitation, sending: sendingInvite } = useInvitations();
 
-  useEffect(() => {
-    fetchUsers();
-    if (isSuperAdmin) {
-      fetchOrganizations();
-    }
-  }, [isSuperAdmin]);
-
   const fetchOrganizations = async () => {
     try {
       const { data, error } = await supabase
@@ -87,10 +80,9 @@ export default function AdminUsers() {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch profiles with organization info
       let profilesQuery = supabase
         .from("profiles")
         .select(`
@@ -103,7 +95,6 @@ export default function AdminUsers() {
         `)
         .order("created_at", { ascending: false });
 
-      // If not super_admin, filter by user's organization
       if (!isSuperAdmin && userOrganization) {
         profilesQuery = profilesQuery.eq("organization_id", userOrganization.id);
       }
@@ -118,8 +109,7 @@ export default function AdminUsers() {
 
       if (rolesError) throw rolesError;
 
-      // Combine profiles with roles and org info
-      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile: any) => {
+      const usersWithRoles: UserWithRole[] = (profiles || []).map((profile) => {
         const userRole = roles?.find((r) => r.user_id === profile.user_id);
         return {
           id: profile.id,
@@ -144,7 +134,14 @@ export default function AdminUsers() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isSuperAdmin, userOrganization]);
+
+  useEffect(() => {
+    fetchUsers();
+    if (isSuperAdmin) {
+      fetchOrganizations();
+    }
+  }, [isSuperAdmin, fetchUsers]);
 
   const handleEditUser = (user: UserWithRole) => {
     setSelectedUser(user);

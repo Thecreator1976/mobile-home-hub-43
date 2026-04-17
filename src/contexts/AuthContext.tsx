@@ -1,196 +1,240 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useRouter } from 'next/router';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
-// Types
-export type UserRole = 'viewer' | 'agent' | 'admin' | 'tenant_admin' | 'super_admin';
+type AppRole = "admin" | "agent" | "viewer" | "super_admin" | "tenant_admin";
 
-interface User {
+interface UserOrganization {
   id: string;
-  email: string;
   name: string;
-  role: UserRole;
-  tenantId?: string;
-  isPaid?: boolean;
-  status?: string;
-  subscriptionExpiresAt?: string;
-}
-
-interface Profile {
-  id: string;
-  user_id: string;
-  name: string;
+  slug: string;
   is_paid: boolean;
-  status: string;
-  subscription_expires_at: string | null;
-}
-
-interface UserRoleRow {
-  id: string;
-  user_id: string;
-  role: UserRole;
-  tenant_id: string | null;
 }
 
 interface AuthContextType {
   user: User | null;
-  userRole: UserRole | null;
+  session: Session | null;
+  userRole: AppRole | null;
+  userOrganization: UserOrganization | null;
+  isSuperAdmin: boolean;
+  isTenantAdmin: boolean;
   isLoading: boolean;
-  isAuthenticated: boolean;
   sessionExpired: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => Promise<void>;
-  setSessionExpired: (value: boolean) => void;
+  setSessionExpired: React.Dispatch<React.SetStateAction<boolean>>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper to clear all Supabase auth tokens from localStorage
+const clearSupabaseLocalStorage = () => {
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (key.startsWith('sb-') || key.includes('supabase'))) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  console.log("Cleared Supabase localStorage keys:", keysToRemove);
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [userOrganization, setUserOrganization] = useState<UserOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const router = useRouter();
-  
-  const supabase = createClientComponentClient();
+
+  const isSuperAdmin = userRole === "super_admin";
+  const isTenantAdmin = userRole === "tenant_admin";
+
+  // Clears all auth state and localStorage tokens
+  const clearAuthState = async (expired: boolean = false) => {
+    console.log("Clearing auth state, expired:", expired);
+    clearSupabaseLocalStorage();
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
+    setUserOrganization(null);
+    if (expired) {
+      setSessionExpired(true);
+    }
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      // Ignore signOut errors during cleanup
+      console.log("SignOut during cleanup:", e);
+    }
+  };
 
   useEffect(() => {
-    checkUser();
-    
-    // Listen for auth changes
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await fetchUserData(session.user);
-        } else if (event === 'SIGNED_OUT') {
+      async (event, currentSession) => {
+        console.log("Auth state changed:", event);
+        
+        // Handle token refresh failures - session exists but refresh failed
+        if (event === 'TOKEN_REFRESHED' && !currentSession) {
+          console.warn("Token refresh failed, clearing auth state");
+          await clearAuthState(true);
+          return;
+        }
+
+        // Handle sign out events
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
           setUser(null);
           setUserRole(null);
+          setUserOrganization(null);
+          return;
+        }
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        // Defer role and org fetch to avoid deadlock
+        if (currentSession?.user) {
+          setTimeout(() => {
+            fetchUserRoleAndOrg(currentSession.user.id);
+          }, 0);
+        } else {
+          setUserRole(null);
+          setUserOrganization(null);
         }
       }
     );
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
+    // THEN check for existing session with error handling
+    supabase.auth.getSession().then(async ({ data: { session: existingSession }, error }) => {
+      if (error) {
+        console.error("Session error, clearing auth state:", error);
+        await clearAuthState(true);
         setIsLoading(false);
         return;
       }
       
-      await fetchUserData(session.user);
-    } catch (error) {
-      console.error('Error checking user:', error);
+      setSession(existingSession);
+      setUser(existingSession?.user ?? null);
+      if (existingSession?.user) {
+        fetchUserRoleAndOrg(existingSession.user.id);
+      }
       setIsLoading(false);
-    }
-  };
+    }).catch(async (error) => {
+      console.error("Unexpected session error:", error);
+      await clearAuthState(true);
+      setIsLoading(false);
+    });
 
-  const fetchUserData = async (supabaseUser: SupabaseUser) => {
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserRoleAndOrg = async (userId: string) => {
     try {
-      // 1. Fetch user role - using maybeSingle() instead of single()
+      // Fetch role
       const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .eq('user_id', supabaseUser.id)
-        .maybeSingle(); // Returns null if no row exists instead of error
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .single();
 
       if (roleError) {
-        console.error('Error fetching user role:', roleError);
-      }
-
-      // 2. Fetch profile - using maybeSingle() instead of single()
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', supabaseUser.id)
-        .maybeSingle(); // Returns null if no row exists instead of error
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-      }
-
-      // 3. Determine role with proper fallback
-      let role: UserRole = 'viewer'; // Default fallback
-      if (roleData && roleData.role) {
-        role = roleData.role;
+        console.error("Error fetching user role:", roleError);
+        setUserRole("viewer");
       } else {
-        console.log(`No role found for user ${supabaseUser.id}, defaulting to 'viewer'`);
+        setUserRole(roleData?.role as AppRole);
       }
 
-      // 4. Build user object
-      const userObj: User = {
-        id: supabaseUser.id,
-        email: supabaseUser.email!,
-        name: profileData?.name || supabaseUser.user_metadata?.name || '',
-        role: role,
-        tenantId: roleData?.tenant_id || undefined,
-        isPaid: profileData?.is_paid || false,
-        status: profileData?.status || 'active',
-        subscriptionExpiresAt: profileData?.subscription_expires_at || undefined,
-      };
+      // Fetch organization via profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("organization_id")
+        .eq("user_id", userId)
+        .single();
 
-      setUser(userObj);
-      setUserRole(role);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      if (profileError || !profileData?.organization_id) {
+        setUserOrganization(null);
+      } else {
+        // Fetch organization details including is_paid
+        const { data: orgData, error: orgError } = await supabase
+          .from("organizations")
+          .select("id, name, slug, is_paid")
+          .eq("id", profileData.organization_id)
+          .single();
 
-  const login = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        await fetchUserData(data.user);
-        setSessionExpired(false);
-        router.push('/dashboard');
+        if (orgError || !orgData) {
+          setUserOrganization(null);
+        } else {
+          setUserOrganization({
+            id: orgData.id,
+            name: orgData.name,
+            slug: orgData.slug,
+            is_paid: orgData.is_paid ?? false,
+          });
+        }
       }
     } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+      console.error("Error fetching user role/org:", error);
+      setUserRole("viewer");
+      setUserOrganization(null);
     }
   };
 
-  const logout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      setUser(null);
-      setUserRole(null);
-      setSessionExpired(false);
-      router.push('/login');
-    }
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const redirectUrl = `${window.location.origin}/`;
+    
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectUrl,
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    return { error: error as Error | null };
   };
 
-  const value: AuthContextType = {
-    user,
-    userRole,
-    isLoading,
-    isAuthenticated: !!user,
-    sessionExpired,
-    login,
-    logout,
-    setSessionExpired,
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return { error: error as Error | null };
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setUserRole(null);
+    setUserOrganization(null);
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        userRole,
+        userOrganization,
+        isSuperAdmin,
+        isTenantAdmin,
+        isLoading,
+        signUp,
+        signIn,
+        signOut,
+                sessionExpired,
+                setSessionExpired,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -199,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

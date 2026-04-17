@@ -3,29 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Home,
-  Lock,
-  ArrowRight,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Building,
-  Shield,
-} from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Home, Lock, ArrowRight, Loader2, CheckCircle, XCircle, Building, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { PasswordStrengthIndicator } from "@/components/auth/PasswordStrengthIndicator";
-
 interface InvitationData {
   id: string;
   email: string;
@@ -36,13 +19,11 @@ interface InvitationData {
   organization_name?: string;
 }
 
-type AppRole = "super_admin" | "tenant_admin" | "admin" | "agent" | "viewer";
-
 export default function AcceptInvite() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
-
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [invitation, setInvitation] = useState<InvitationData | null>(null);
@@ -55,18 +36,9 @@ export default function AcceptInvite() {
     setIsPasswordValid(isValid);
   }, []);
 
-  useEffect(() => {
-    if (!token) {
-      setError("No invitation token provided");
-      setIsLoading(false);
-      return;
-    }
-
-    void validateInvitation();
-  }, [token]);
-
-  const validateInvitation = async () => {
+  const validateInvitation = useCallback(async () => {
     try {
+      // Fetch invitation by token
       const { data: invite, error: inviteError } = await supabase
         .from("invitations")
         .select(`
@@ -89,122 +61,48 @@ export default function AcceptInvite() {
         return;
       }
 
+      // Check if already used
       if (invite.status !== "pending") {
         setError("This invitation has already been used or revoked");
         setIsLoading(false);
         return;
       }
 
+      // Check if expired
       if (new Date(invite.expires_at) < new Date()) {
         setError("This invitation has expired");
         setIsLoading(false);
         return;
       }
 
+      const organizationName =
+        typeof invite.organizations === "object" &&
+        invite.organizations !== null &&
+        "name" in invite.organizations &&
+        typeof invite.organizations.name === "string"
+          ? invite.organizations.name
+          : "Unknown Organization";
+
       setInvitation({
         ...invite,
-        organization_name: (invite.organizations as { name?: string } | null)?.name || "Unknown Organization",
+        organization_name: organizationName,
       });
-
       setIsLoading(false);
     } catch (err) {
       console.error("Error validating invitation:", err);
       setError("An error occurred while validating the invitation");
       setIsLoading(false);
     }
-  };
+  }, [token]);
 
-  const ensureProfileRecord = async (userId: string, invite: InvitationData) => {
-    const { data: existingProfile, error: profileLookupError } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (profileLookupError) {
-      throw profileLookupError;
+  useEffect(() => {
+    if (!token) {
+      setError("No invitation token provided");
+      setIsLoading(false);
+      return;
     }
-
-    const profilePayload = {
-      user_id: userId,
-      email: invite.email,
-      full_name: "",
-      organization_id: invite.organization_id,
-      status: "pending",
-    };
-
-    if (existingProfile?.id) {
-      const { error: updateProfileError } = await supabase
-        .from("profiles")
-        .update({
-          email: profilePayload.email,
-          full_name: profilePayload.full_name,
-          organization_id: profilePayload.organization_id,
-          status: profilePayload.status,
-        })
-        .eq("user_id", userId);
-
-      if (updateProfileError) {
-        throw updateProfileError;
-      }
-    } else {
-      const { error: insertProfileError } = await supabase
-        .from("profiles")
-        .insert(profilePayload);
-
-      if (insertProfileError) {
-        throw insertProfileError;
-      }
-    }
-  };
-
-  const ensureUserRoleRecord = async (userId: string, role: AppRole) => {
-    const { data: existingRole, error: roleLookupError } = await supabase
-      .from("user_roles")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (roleLookupError) {
-      throw roleLookupError;
-    }
-
-    if (existingRole?.id) {
-      const { error: updateRoleError } = await supabase
-        .from("user_roles")
-        .update({ role })
-        .eq("user_id", userId);
-
-      if (updateRoleError) {
-        throw updateRoleError;
-      }
-    } else {
-      const { error: insertRoleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: userId,
-          role,
-        });
-
-      if (insertRoleError) {
-        throw insertRoleError;
-      }
-    }
-  };
-
-  const markInvitationAccepted = async (inviteId: string) => {
-    const { error: inviteUpdateError } = await supabase
-      .from("invitations")
-      .update({
-        status: "accepted",
-        accepted_at: new Date().toISOString(),
-      })
-      .eq("id", inviteId);
-
-    if (inviteUpdateError) {
-      throw inviteUpdateError;
-    }
-  };
+    validateInvitation();
+  }, [token, validateInvitation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -232,6 +130,7 @@ export default function AcceptInvite() {
     setIsSubmitting(true);
 
     try {
+      // Sign up the user
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: invitation.email,
         password,
@@ -244,34 +143,70 @@ export default function AcceptInvite() {
         },
       });
 
-      if (signUpError) {
-        throw signUpError;
+      if (signUpError) throw signUpError;
+
+      if (!authData.user) {
+        throw new Error("Failed to create user account");
       }
 
-      if (!authData.user?.id) {
-        throw new Error("Failed to create user account.");
+      // Wait a moment for the trigger to create the profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Update the profile with organization and pending status
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({
+          organization_id: invitation.organization_id,
+          status: "pending", // Still needs admin approval
+        })
+        .eq("user_id", authData.user.id);
+
+      if (profileError) {
+        console.error("Profile update error:", profileError);
       }
 
-      const acceptedRole = (invitation.role || "viewer") as AppRole;
+      // Update user role
+      const allowedRole =
+        invitation.role === "super_admin" ||
+        invitation.role === "tenant_admin" ||
+        invitation.role === "admin" ||
+        invitation.role === "agent" ||
+        invitation.role === "viewer"
+          ? invitation.role
+          : "viewer";
 
-      await ensureProfileRecord(authData.user.id, invitation);
-      await ensureUserRoleRecord(authData.user.id, acceptedRole);
-      await markInvitationAccepted(invitation.id);
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .update({ role: allowedRole })
+        .eq("user_id", authData.user.id);
+
+      if (roleError) {
+        console.error("Role update error:", roleError);
+      }
+
+      // Mark invitation as accepted
+      const { error: inviteUpdateError } = await supabase
+        .from("invitations")
+        .update({
+          status: "accepted",
+          accepted_at: new Date().toISOString(),
+        })
+        .eq("id", invitation.id);
+
+      if (inviteUpdateError) {
+        console.error("Invitation update error:", inviteUpdateError);
+      }
 
       toast({
-        title: "Account created",
+        title: "Account created!",
         description: "Your account is pending approval. You'll be notified when it's activated.",
       });
 
+      // Navigate to pending approval page
       navigate("/pending-approval", { replace: true });
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error accepting invitation:", err);
-
-      const message =
-        err instanceof Error
-          ? err.message
-          : "Failed to create account. Please try again.";
-
+      const message = err instanceof Error ? err.message : "Failed to create account. Please try again.";
       toast({
         title: "Error",
         description: message,
@@ -284,18 +219,12 @@ export default function AcceptInvite() {
 
   const getRoleName = (role: string) => {
     switch (role) {
-      case "super_admin":
-        return "Super Admin";
-      case "tenant_admin":
-        return "Tenant Admin";
-      case "admin":
-        return "Admin";
-      case "agent":
-        return "Agent";
-      case "viewer":
-        return "Viewer";
-      default:
-        return role;
+      case "super_admin": return "Super Admin";
+      case "tenant_admin": return "Tenant Admin";
+      case "admin": return "Admin";
+      case "agent": return "Agent";
+      case "viewer": return "Viewer";
+      default: return role;
     }
   };
 
@@ -321,7 +250,9 @@ export default function AcceptInvite() {
             <CardDescription>{error}</CardDescription>
           </CardHeader>
           <CardFooter className="flex justify-center">
-            <Button onClick={() => navigate("/login")}>Go to Login</Button>
+            <Button onClick={() => navigate("/login")}>
+              Go to Login
+            </Button>
           </CardFooter>
         </Card>
       </div>
@@ -331,6 +262,7 @@ export default function AcceptInvite() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
       <div className="w-full max-w-md animate-fade-in">
+        {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary">
             <Home className="h-6 w-6 text-primary-foreground" />
@@ -349,10 +281,12 @@ export default function AcceptInvite() {
               </div>
             </div>
             <CardTitle className="text-2xl">You're Invited!</CardTitle>
-            <CardDescription>Set up your password to join the team</CardDescription>
+            <CardDescription>
+              Set up your password to join the team
+            </CardDescription>
           </CardHeader>
-
           <CardContent>
+            {/* Invitation Details */}
             <div className="space-y-3 mb-6 p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-3">
                 <Building className="h-5 w-5 text-muted-foreground" />
@@ -361,7 +295,6 @@ export default function AcceptInvite() {
                   <p className="font-medium">{invitation?.organization_name}</p>
                 </div>
               </div>
-
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-muted-foreground" />
                 <div>
@@ -381,7 +314,6 @@ export default function AcceptInvite() {
                   className="bg-muted"
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
@@ -398,14 +330,12 @@ export default function AcceptInvite() {
                     minLength={8}
                   />
                 </div>
-
                 <PasswordStrengthIndicator
                   password={password}
                   onValidationChange={handlePasswordValidationChange}
                   checkBreaches={true}
                 />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
@@ -422,12 +352,10 @@ export default function AcceptInvite() {
                     minLength={8}
                   />
                 </div>
-
                 {confirmPassword && password !== confirmPassword && (
                   <p className="text-sm text-destructive">Passwords don't match</p>
                 )}
               </div>
-
               <Button variant="gradient" className="w-full" type="submit" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
@@ -443,7 +371,6 @@ export default function AcceptInvite() {
               </Button>
             </form>
           </CardContent>
-
           <CardFooter>
             <p className="text-sm text-muted-foreground text-center w-full">
               After creating your account, an administrator will review and approve your access.

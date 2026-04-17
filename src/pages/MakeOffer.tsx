@@ -137,11 +137,12 @@ export default function MakeOffer() {
           ? `Contract generated using "${selectedTemplate.name}" template and saved.`
           : "AI has generated your contract from scratch and saved it.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error generating contract:", error);
+      const message = error instanceof Error ? error.message : "Failed to generate contract. Please try again.";
       toast({
         title: "Generation Failed",
-        description: error.message || "Failed to generate contract. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -174,7 +175,7 @@ export default function MakeOffer() {
     try {
       // Update lead status to offer_made
       const { error } = await supabase
-        .from("seller_leads" as any)
+        .from("secure_seller_leads")
         .update({ 
           status: "offer_made",
           target_offer: offerData.purchasePrice,
@@ -190,10 +191,11 @@ export default function MakeOffer() {
       });
 
       navigate(`/seller-leads/${lead.id}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to save offer.";
       toast({
         title: "Error",
-        description: error.message || "Failed to save offer.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -528,7 +530,7 @@ export default function MakeOffer() {
                     <Label>Contract Type</Label>
                     <Select
                       value={contractType}
-                      onValueChange={(value: any) => setContractType(value)}
+                      onValueChange={(value: "purchase_agreement" | "option_agreement" | "assignment") => setContractType(value)}
                     >
                       <SelectTrigger>
                         <SelectValue />

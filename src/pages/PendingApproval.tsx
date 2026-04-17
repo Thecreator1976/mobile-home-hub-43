@@ -1,28 +1,45 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserCheck, LogOut, RefreshCw, Clock } from "lucide-react";
+import { Clock, LogOut, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export default function PendingApproval() {
-  const { user, signOut, isLoading } = useAuth();
-  const [profileStatus, setProfileStatus] = useState<string>("pending");
-  const [checking, setChecking] = useState(false);
   const navigate = useNavigate();
+  const { user, isLoading, signOut } = useAuth();
+  const [status, setStatus] = useState<string>("pending");
+  const [checking, setChecking] = useState(true);
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate("/login");
-      return;
-    }
+  const fetchProfileStatus = useCallback(async () => {
+    if (!user?.id) return;
 
-    // Listen for profile status changes
-    if (user) {
+    try {
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("status")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) throw error;
+
+      const profileStatus = profile?.status || "pending";
+      setStatus(profileStatus);
+
+      if (profileStatus === "active") {
+        toast({
+          title: "Access approved",
+          description: "Your account has been approved. Welcome!",
+        });
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
       const channel = supabase
-        .channel("profile-status")
+        .channel(`profile-status-${user.id}`)
         .on(
           "postgres_changes",
           {
@@ -32,146 +49,107 @@ export default function PendingApproval() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
-            const newStatus = payload.new.status;
-            setProfileStatus(newStatus);
-            
+            const newStatus = payload.new && typeof payload.new === "object" && "status" in payload.new
+              ? String(payload.new.status)
+              : "pending";
+
+            setStatus(newStatus);
+
             if (newStatus === "active") {
               toast({
-                title: "Account Approved!",
-                description: "Your account has been approved. Redirecting...",
+                title: "Access approved",
+                description: "Your account has been approved. Welcome!",
               });
-              navigate("/dashboard");
+              navigate("/dashboard", { replace: true });
             }
           }
         )
         .subscribe();
 
-      // Initial fetch
-      fetchProfileStatus();
-
       return () => {
         supabase.removeChannel(channel);
       };
-    }
-  }, [user, isLoading, navigate]);
-
-  const fetchProfileStatus = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("status")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!error && data) {
-      setProfileStatus(data.status || "pending");
-      
-      if (data.status === "active") {
-        navigate("/dashboard");
-      }
-    }
-  };
-
-  const handleCheckStatus = async () => {
-    setChecking(true);
-    await fetchProfileStatus();
-    setChecking(false);
-    
-    if (profileStatus !== "active") {
+    } catch (error) {
+      console.error("Error fetching profile status:", error);
       toast({
-        title: "Still pending",
-        description: "Your account is still awaiting approval.",
+        title: "Error",
+        description: "Failed to check approval status.",
+        variant: "destructive",
       });
+    } finally {
+      setChecking(false);
     }
-  };
+  }, [user?.id, navigate]);
 
-  const handleSignOut = async () => {
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/login", { replace: true });
+      return;
+    }
+
+    if (user) {
+      const cleanupPromise = fetchProfileStatus();
+
+      return () => {
+        Promise.resolve(cleanupPromise).then((cleanup) => {
+          if (typeof cleanup === "function") {
+            cleanup();
+          }
+        });
+      };
+    }
+  }, [user, isLoading, navigate, fetchProfileStatus]);
+
+  const handleLogout = async () => {
     await signOut();
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
-  if (isLoading || !user) {
+  if (isLoading || checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">Loading...</div>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-secondary/5 p-4">
-      <Card className="w-full max-w-md shadow-xl">
-        <CardHeader className="space-y-1">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-secondary/10 flex items-center justify-center">
-              <UserCheck className="h-8 w-8 text-secondary" />
+    <DashboardLayout>
+      <div className="max-w-2xl mx-auto py-12">
+        <Card className="shadow-xl">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <div className="flex items-center justify-center w-16 h-16 rounded-full bg-status-offer/10">
+                <Clock className="h-8 w-8 text-status-offer" />
+              </div>
             </div>
-          </div>
-          <CardTitle className="text-2xl font-bold text-center">Account Pending Approval</CardTitle>
-          <CardDescription className="text-center">
-            Your account is currently under review
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="text-center space-y-2">
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="h-5 w-5 text-secondary" />
-              <p className="text-lg font-medium">
-                Status: <span className="capitalize text-secondary">{profileStatus}</span>
-              </p>
+            <CardTitle className="text-2xl">Account Pending Approval</CardTitle>
+            <CardDescription>
+              Your account has been created and is waiting for administrator approval.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 text-center">
+            <div className="rounded-lg bg-muted p-4">
+              <p className="text-sm text-muted-foreground mb-2">Current status</p>
+              <p className="font-semibold capitalize">{status}</p>
             </div>
-            <p className="text-muted-foreground">{user.email}</p>
-          </div>
 
-          <div className="bg-secondary/5 border border-secondary/20 rounded-lg p-4">
             <p className="text-sm text-muted-foreground">
-              Your account has been created and your email verified. An administrator 
-              needs to approve your account before you can access the CRM. This usually 
-              takes 1-2 business days.
+              You will be able to access the CRM once an administrator approves your account.
+              This page will update automatically when your status changes.
             </p>
-          </div>
 
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>Once approved, you'll be able to:</p>
-            <ul className="list-disc pl-5 space-y-1">
-              <li>Manage seller leads and buyers</li>
-              <li>Schedule appointments</li>
-              <li>Track expenses and deals</li>
-              <li>Generate contracts</li>
-            </ul>
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-3">
-          <Button
-            onClick={handleCheckStatus}
-            variant="gradient"
-            className="w-full"
-            disabled={checking}
-          >
-            {checking ? (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Checking...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Check Approval Status
-              </>
-            )}
-          </Button>
-
-          <Button
-            onClick={handleSignOut}
-            variant="ghost"
-            className="w-full text-muted-foreground"
-          >
-            <LogOut className="mr-2 h-4 w-4" />
-            Sign Out
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log Out
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 }

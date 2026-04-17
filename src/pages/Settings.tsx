@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,10 +135,10 @@ export default function Settings() {
       };
       fetchOrgs();
     }
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, selectedOrgId]);
 
   // Load organization settings
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     if (!effectiveOrgId) return;
     
     setLoadingSettings(true);
@@ -160,7 +160,7 @@ export default function Settings() {
     } finally {
       setLoadingSettings(false);
     }
-  };
+  }, [effectiveOrgId]);
 
   // Save service charges
   const handleSaveServiceCharges = async () => {
@@ -196,8 +196,7 @@ export default function Settings() {
 
       const { error } = await supabase
         .from("organizations")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .update({ settings: updatedSettings as any })
+        .update({ settings: updatedSettings as never })
         .eq("id", effectiveOrgId);
 
       if (error) throw error;
@@ -207,10 +206,11 @@ export default function Settings() {
         description: "Service charges have been updated successfully.",
       });
       setGeneralDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to save settings";
       toast({
         title: "Error",
-        description: error?.message || "Failed to save settings",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -219,7 +219,7 @@ export default function Settings() {
   };
 
   // Load team members
-  const loadTeamMembers = async () => {
+  const loadTeamMembers = useCallback(async () => {
     if (!effectiveOrgId) return;
     
     setLoadingTeam(true);
@@ -284,7 +284,7 @@ export default function Settings() {
     } finally {
       setLoadingTeam(false);
     }
-  };
+  }, [effectiveOrgId]);
 
   // Update member status
   const handleUpdateMemberStatus = async (member: TeamMember, newStatus: string) => {
@@ -302,10 +302,11 @@ export default function Settings() {
         description: `${member.email} status changed to ${newStatus}.`,
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update member";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update member",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -329,10 +330,11 @@ export default function Settings() {
         description: `${member.email} role changed to ${newRole}.`,
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update role";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update role",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -355,10 +357,11 @@ export default function Settings() {
         description: "The invitation has been cancelled.",
       });
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to cancel invitation";
       toast({
         title: "Error",
-        description: error?.message || "Failed to cancel invitation",
+        description: message,
         variant: "destructive",
       });
     }
@@ -386,13 +389,13 @@ export default function Settings() {
     if (generalDialogOpen && effectiveOrgId) {
       loadSettings();
     }
-  }, [generalDialogOpen, effectiveOrgId]);
+  }, [generalDialogOpen, effectiveOrgId, loadSettings]);
 
   useEffect(() => {
     if (teamDialogOpen && effectiveOrgId) {
       loadTeamMembers();
     }
-  }, [teamDialogOpen, effectiveOrgId]);
+  }, [teamDialogOpen, effectiveOrgId, loadTeamMembers]);
 
   const getStatusBadge = (status: string | null) => {
     switch (status) {
