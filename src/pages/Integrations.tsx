@@ -175,7 +175,11 @@ export default function Integrations() {
   }, [integrations]);
 
   const getConfiguredEvents = (integration?: ExternalIntegration | null) => {
-    const configEvents = integration?.config?.events;
+    const config = integration?.config;
+    const configEvents =
+      config && typeof config === "object" && !Array.isArray(config)
+        ? (config as Record<string, unknown>).events
+        : undefined;
     if (Array.isArray(configEvents)) {
       return configEvents.filter(
         (value): value is IntegrationEventType =>
@@ -292,17 +296,17 @@ export default function Integrations() {
     setIsTesting(true);
 
     try {
-      const result = await triggerWebhook(webhookUrl.trim(), {
+      const ok = await triggerWebhook(webhookUrl.trim(), {
         test: true,
         service_name: selectedService.name,
         supported_events: selectedEvents,
         message: `Test webhook from MobileHome CRM for ${selectedService.displayName}`,
       });
 
-      if (!result.success) {
+      if (!ok) {
         toast({
           title: "Webhook test failed",
-          description: result.message,
+          description: "The webhook request did not succeed. Verify the URL.",
           variant: "destructive",
         });
       }

@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 
+export type IntegrationEventType = "new_lead" | "status_change";
+
 export interface ExternalIntegration {
   id: string;
   user_id: string;
