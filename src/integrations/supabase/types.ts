@@ -118,6 +118,63 @@ export type Database = {
           },
         ]
       }
+      buyer_leads: {
+        Row: {
+          bedrooms_min: number | null
+          budget_max: number | null
+          budget_min: number | null
+          created_at: string
+          email: string | null
+          home_type: string | null
+          id: string
+          investor_type: string | null
+          message: string | null
+          name: string
+          phone: string | null
+          pre_approved: boolean | null
+          preferred_locations: string[] | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bedrooms_min?: number | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          email?: string | null
+          home_type?: string | null
+          id?: string
+          investor_type?: string | null
+          message?: string | null
+          name: string
+          phone?: string | null
+          pre_approved?: boolean | null
+          preferred_locations?: string[] | null
+          source: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bedrooms_min?: number | null
+          budget_max?: number | null
+          budget_min?: number | null
+          created_at?: string
+          email?: string | null
+          home_type?: string | null
+          id?: string
+          investor_type?: string | null
+          message?: string | null
+          name?: string
+          phone?: string | null
+          pre_approved?: boolean | null
+          preferred_locations?: string[] | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       buyers: {
         Row: {
           created_at: string
@@ -1212,6 +1269,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      seller_leads: {
+        Row: {
+          bathrooms: number | null
+          bedrooms: number | null
+          city: string | null
+          condition: string | null
+          created_at: string
+          email: string | null
+          id: string
+          message: string | null
+          name: string
+          own_land: boolean | null
+          park_name: string | null
+          phone: string | null
+          property_address: string | null
+          source: string
+          state: string | null
+          status: string
+          timeline: string | null
+          updated_at: string
+          year: number | null
+          zip: string | null
+        }
+        Insert: {
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name: string
+          own_land?: boolean | null
+          park_name?: string | null
+          phone?: string | null
+          property_address?: string | null
+          source: string
+          state?: string | null
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          year?: number | null
+          zip?: string | null
+        }
+        Update: {
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          condition?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          message?: string | null
+          name?: string
+          own_land?: boolean | null
+          park_name?: string | null
+          phone?: string | null
+          property_address?: string | null
+          source?: string
+          state?: string | null
+          status?: string
+          timeline?: string | null
+          updated_at?: string
+          year?: number | null
+          zip?: string | null
+        }
+        Relationships: []
       }
       sms_templates: {
         Row: {
