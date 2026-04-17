@@ -81,6 +81,7 @@ export default function Buyers() {
                   <TableHead>Budget</TableHead>
                   <TableHead>Preferences</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -92,6 +93,7 @@ export default function Buyers() {
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
                   </TableRow>
                 ))}
@@ -118,6 +120,7 @@ export default function Buyers() {
                   <TableHead>Budget</TableHead>
                   <TableHead>Preferences</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Source</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -168,6 +171,11 @@ export default function Buyers() {
                     <TableCell>
                       <Badge variant={getStatusVariant(buyer.status)}>
                         {buyer.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={(buyer as any).source === 'scmobilehomebuyer' ? 'default' : (buyer as any).source === 'react-foundation' ? 'secondary' : 'outline'}>
+                        {(buyer as any).source === 'scmobilehomebuyer' ? 'SC Buyer Site' : (buyer as any).source === 'react-foundation' ? 'Carolinas Market' : 'Manual'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
