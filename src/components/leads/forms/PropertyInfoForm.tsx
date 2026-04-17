@@ -17,7 +17,7 @@ interface PropertyInfoData {
 
 interface PropertyInfoFormProps {
   data: PropertyInfoData;
-  onChange: (field: string, value: any) => void;
+  onChange: (field: string, value: string | number | boolean | null) => void;
   onCalculate?: () => void;
 }
 

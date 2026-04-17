@@ -155,9 +155,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ success: true, emailResponse }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in send-contract-notification:", error);
-    const errorMessage = error?.message || "Unknown error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     
     // Handle authentication errors
     if (errorMessage.includes("authenticated") || errorMessage.includes("token")) {

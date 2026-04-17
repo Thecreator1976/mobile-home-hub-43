@@ -38,8 +38,7 @@ export default function ForgotPassword() {
       });
 
       if (error) {
-        // Check for rate limiting error
-        if (error.message?.includes('security purposes') || error.status === 429) {
+        if (error.message?.includes("security purposes") || error.status === 429) {
           toast({
             title: "Please wait",
             description: error.message || "You've requested too many reset emails. Please wait before trying again.",
@@ -55,10 +54,12 @@ export default function ForgotPassword() {
         title: "Email sent",
         description: "Check your inbox for the password reset link.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to send reset email. Please try again.";
+
       toast({
         title: "Error",
-        description: error?.message || "Failed to send reset email. Please try again.",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -94,11 +95,7 @@ export default function ForgotPassword() {
             </p>
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setEmailSent(false)}
-            >
+            <Button variant="outline" className="w-full" onClick={() => setEmailSent(false)}>
               Try Again
             </Button>
             <Link to="/login" className="w-full">

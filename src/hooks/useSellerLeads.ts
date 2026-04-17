@@ -121,7 +121,7 @@ export function useSellerLeads() {
     mutationFn: async (input: CreateLeadInput) => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase.rpc("insert_seller_lead" as any, {
+      const { data, error } = await supabase.rpc("insert_seller_lead", {
         p_name: input.name,
         p_address: input.address,
         p_asking_price: input.asking_price,
@@ -174,7 +174,7 @@ export function useSellerLeads() {
       
       const oldStatus = currentLead?.status;
 
-      const { data, error } = await supabase.rpc("update_seller_lead" as any, {
+      const { data, error } = await supabase.rpc("update_seller_lead", {
         p_id: id,
         p_name: updates.name || null,
         p_address: updates.address || null,
@@ -222,7 +222,7 @@ export function useSellerLeads() {
 
   const deleteLead = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.rpc("delete_seller_lead" as any, {
+      const { error } = await supabase.rpc("delete_seller_lead", {
         p_id: id,
       });
 

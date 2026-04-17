@@ -134,8 +134,9 @@ export default function ImportBuyers() {
         title: "CSV Parsed",
         description: `Found ${parsed.length} records (${parsed.filter(b => b.valid).length} valid).`,
       });
-    } catch (error: any) {
-      setParseErrors([error.message]);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to parse CSV";
+      setParseErrors([message]);
       setParsedData([]);
     }
   };

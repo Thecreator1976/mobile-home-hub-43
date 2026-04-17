@@ -140,11 +140,13 @@ Deno.serve(async (req) => {
             console.log(`Processing message from sender (ID hidden for privacy)`);
 
             // Find or create conversation
-            let { data: conversation, error: convError } = await supabase
+            const { data: existingConversation, error: convError } = await supabase
               .from("messenger_conversations")
               .select("*")
               .eq("facebook_user_id", senderId)
               .single();
+
+            let conversation = existingConversation;
 
             if (convError && convError.code === "PGRST116") {
               // Conversation doesn't exist, create one

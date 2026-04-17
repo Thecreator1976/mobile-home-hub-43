@@ -141,7 +141,7 @@ export function FileUpload({
         uploadFile(file);
       }
     },
-    [bucket, folder, maxSize, onUploadComplete, onError]
+    [uploadFile]
   );
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

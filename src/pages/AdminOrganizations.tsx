@@ -199,10 +199,11 @@ export default function AdminOrganizations() {
       setDialogOpen(false);
       setNewOrgName("");
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to create organization";
       toast({
         title: "Error",
-        description: error?.message || "Failed to create organization",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -225,10 +226,11 @@ export default function AdminOrganizations() {
       });
 
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update organization";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update organization",
+        description: message,
         variant: "destructive",
       });
     }
@@ -262,10 +264,11 @@ export default function AdminOrganizations() {
       });
 
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update payment status";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update payment status",
+        description: message,
         variant: "destructive",
       });
     }
@@ -300,10 +303,11 @@ export default function AdminOrganizations() {
       setDeleteDialogOpen(false);
       setOrgToDelete(null);
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to delete organization";
       toast({
         title: "Error",
-        description: error?.message || "Failed to delete organization",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -379,10 +383,11 @@ export default function AdminOrganizations() {
 
       if (selectedOrg) fetchOrgUsers(selectedOrg.id);
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update user";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update user",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -406,10 +411,11 @@ export default function AdminOrganizations() {
       });
 
       if (selectedOrg) fetchOrgUsers(selectedOrg.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to update role";
       toast({
         title: "Error",
-        description: error?.message || "Failed to update role",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -434,10 +440,11 @@ export default function AdminOrganizations() {
 
       if (selectedOrg) fetchOrgUsers(selectedOrg.id);
       fetchOrganizations();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to remove user";
       toast({
         title: "Error",
-        description: error?.message || "Failed to remove user",
+        description: message,
         variant: "destructive",
       });
     } finally {

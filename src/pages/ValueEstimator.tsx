@@ -149,7 +149,7 @@ export default function ValueEstimator() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleChange = (field: keyof PropertyData, value: any) => {
+  const handleChange = <K extends keyof PropertyData>(field: K, value: PropertyData[K]) => {
     setData((prev) => ({ ...prev, [field]: value }));
     setHasCalculated(false);
   };

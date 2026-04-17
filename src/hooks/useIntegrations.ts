@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ export interface ExternalIntegration {
   user_id: string;
   service_name: string;
   webhook_url: string | null;
-  config: Record<string, any>;
+  config: Json;
   is_active: boolean;
   last_sync: string | null;
   created_at: string;
@@ -35,7 +36,7 @@ export interface SocialPost {
 export interface CreateIntegrationInput {
   service_name: string;
   webhook_url?: string;
-  config?: Record<string, any>;
+  config?: Json;
 }
 
 export function useIntegrations() {
@@ -141,7 +142,7 @@ export function useIntegrations() {
 
   const triggerWebhook = async (
     webhookUrl: string,
-    payload: Record<string, any>
+    payload: Record<string, unknown>
   ): Promise<boolean> => {
     try {
       await fetch(webhookUrl, {
