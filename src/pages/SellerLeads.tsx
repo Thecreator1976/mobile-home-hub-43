@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Plus, Eye, Edit, Trash2, Phone, Mail } from "lucide-react";
@@ -28,6 +29,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function SellerLeads() {
   const { leads, isLoading, deleteLead } = useSellerLeads();
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+
+  const filteredLeads = sourceFilter === 'all'
+    ? leads
+    : leads?.filter(lead => (sourceFilter === 'manual' ? !lead.source : lead.source === sourceFilter));
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return "-";
