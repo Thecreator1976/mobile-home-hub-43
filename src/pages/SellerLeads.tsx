@@ -65,6 +65,21 @@ export default function SellerLeads() {
           </Button>
         </div>
 
+        <div className="flex gap-2 mb-4">
+          <Button variant={sourceFilter === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('all')}>
+            All Sources
+          </Button>
+          <Button variant={sourceFilter === 'scmobilehomebuyer' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('scmobilehomebuyer')}>
+            SC Buyer Site (Retail)
+          </Button>
+          <Button variant={sourceFilter === 'react-foundation' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('react-foundation')}>
+            Carolinas Market (Wholesale)
+          </Button>
+          <Button variant={sourceFilter === 'manual' ? 'default' : 'outline'} size="sm" onClick={() => setSourceFilter('manual')}>
+            Manual Entry
+          </Button>
+        </div>
+
         {isLoading ? (
           <div className="rounded-lg border">
             <Table>
@@ -94,7 +109,7 @@ export default function SellerLeads() {
               </TableBody>
             </Table>
           </div>
-        ) : leads.length === 0 ? (
+        ) : filteredLeads.length === 0 ? (
           <div className="rounded-lg border p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">No Seller Leads Yet</h3>
             <p className="text-muted-foreground mb-4">
@@ -119,7 +134,7 @@ export default function SellerLeads() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {leads.map((lead) => (
+                {filteredLeads.map((lead) => (
                   <TableRow key={lead.id}>
                     <TableCell>
                       <div className="font-medium">{lead.name}</div>
