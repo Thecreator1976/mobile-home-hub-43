@@ -34,6 +34,7 @@ export interface SellerLead {
   updated_at: string;
   org_id?: string;
   organization_id?: string | null;
+  source: string | null;
 }
 
 export interface CreateLeadInput {

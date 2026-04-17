@@ -4,6 +4,7 @@ import { Plus, Eye, Edit, Trash2, Phone, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSellerLeads } from "@/hooks/useSellerLeads";
 import { StatusBadge } from "@/components/StatusBadge";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
